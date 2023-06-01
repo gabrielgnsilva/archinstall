@@ -1,0 +1,12 @@
+wireplumber
+pipewire
+lib32-pipewire
+pipewire-audio
+pipewire-pulse
+pipewire-alsa
+pipewire-jack
+lib32-pipewire-jack
+qpwgraph
+pamixer
+pulsemixer
+noise-suppression-for-voice
