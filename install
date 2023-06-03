@@ -152,7 +152,7 @@ function script_init() {
     command mkdir --parents "$(command dirname "${script_logfile}")" \
         || {
             local exit_code="${?}"
-            command printf "Failed to create log file: \"%s\".\nMake sure it is a valid path and that you have permission to use it." "${script_logfile}"
+            command printf "Failed to create log file: \"%s\".\nMake sure it is a valid path and that you have permission to use it." "${script_logfile}" >&2
             exit "${exit_code}"
         }
 
@@ -382,7 +382,7 @@ function install-packages() {
     local ans
 
     if [[ ! "$(id -u)" -eq 0 ]]; then
-        command printf "%s: Script does not have sudo permission. Exiting..." "${script_name}"
+        command printf "%s: Script does not have sudo permission. Exiting...\n" "${script_name}" >&2
         exit 1
     fi
 
