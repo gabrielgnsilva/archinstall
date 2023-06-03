@@ -413,7 +413,7 @@ function install-packages() {
         "${script_dir}/data/packages/display_server/xorg"
         "${script_dir}/data/packages/desktop_environment/${de}"
         "${script_dir}/data/packages/audio/${audio}"
-        "${script_dir}/data/packages/apps/pacman/packages"
+        "${script_dir}/data/packages/apps/packages"
     )
 
     for file in "${path[@]}"; do
