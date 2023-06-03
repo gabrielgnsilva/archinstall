@@ -252,7 +252,7 @@ function set_network() {
 function config_package_manager() {
 
     # Backup "pacman.conf"
-    create --folder "${script_dir}"/data/backup
+    create --directory "${script_dir}"/data/backup
     if [ ! -f "${script_dir}"/data/backup/pacman.conf.backup ]; then
         do_cp --verbose /etc/pacman.conf \
             "${script_dir}"/data/backup/pacman.conf.backup
