@@ -388,7 +388,7 @@ function install-packages() {
 
     local username="${SUDO_USER:-${USER}}"
     local xdg_config_home
-    xdg_config_home=$(sudo -u "${username}" bash -c 'echo "${XDG_CONFIG_HOME}"')
+    xdg_config_home=$(sudo -u "${username}" bash -c 'command echo "${XDG_CONFIG_HOME}"')
 
     while true; do
         command read -r -p "$(do_println "\nOptions: [PipeWire(1)] or [PulseAudio(2)]\nChoose Audio Server: ")" ans
@@ -470,7 +470,7 @@ function install-packages() {
 function main() {
 
     script_init "${@}"
-    echo "${script_dir}" && exit 1
+
     if [[ "${#}" -lt 1 ]]; then
         display_usage_help
         exit 0
