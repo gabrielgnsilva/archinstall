@@ -427,7 +427,7 @@ function install-packages() {
         while IFS="" command read -r p <&3 || [ -n "${p}" ]; do
             trace "Installing \"${p}\", from \"${file}\""
             while true; do
-                command pacman --sync "${p}" --noconfirm || \
+                command sudo pacman --sync "${p}" --noconfirm || \
                     command sudo pacman --sync "${p}" || :
 
                 if command sudo pacman -Q "${p}" >/dev/null 2>&1 || command sudo pacman -Qg "${p}" >/dev/null 2>&1; then
