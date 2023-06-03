@@ -200,9 +200,9 @@ function set_network() {
 
     # Hostname
     while true; do
-        command read -r -p "$(do_print "Set Hostname: ")" user_hostname
+        command read -r -p "$(do_printf "Set Hostname: ")" user_hostname
 
-        command read -r -p "$(do_print "Confirm Hostname \"${user_hostname}\"? ")" yn
+        command read -r -p "$(do_printf "Confirm Hostname \"${user_hostname}\"? ")" yn
         case "${yn}" in
             "y" | "yes" )
                 do_println "${user_hostname}" > /etc/hostname
@@ -214,9 +214,9 @@ function set_network() {
 
     # Pretty Hostname
     while true; do
-        command read -r -p "$(do_print "Set Pretty Hostname: ")" user_pretty_hostname
+        command read -r -p "$(do_printf "Set Pretty Hostname: ")" user_pretty_hostname
 
-        command read -r -p "$(do_print "Confirm Pretty Hostname \"${user_pretty_hostname}\"? ")" yn
+        command read -r -p "$(do_printf "Confirm Pretty Hostname \"${user_pretty_hostname}\"? ")" yn
         case "${yn}" in
             "y" | "yes" )
                 {
