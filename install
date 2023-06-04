@@ -354,6 +354,7 @@ function configure-home-directory() {
     do_mkdir --verbose /etc/skel/Virtual\ Machines
     do_mkdir --verbose /etc/skel/Virtual\ Machines/Disks
     do_mkdir --verbose /etc/skel/Virtual\ Machines/Images
+    do_mkdir --verbose /etc/skel/.config
     do_mkdir --verbose /etc/skel/.local
     do_mkdir --verbose /etc/skel/.local/bin
 }
