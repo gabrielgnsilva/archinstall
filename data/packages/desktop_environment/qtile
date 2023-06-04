@@ -4,6 +4,7 @@ dunst
 rofi
 rofi-emoji
 xsel
+xdotool
 gtk-engine-murrine
 kvantum
 lxappearance
