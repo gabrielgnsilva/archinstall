@@ -137,27 +137,27 @@ function script_init() {
 
     IFS=$' \t\n'
 
-    script_head=$(command grep --no-messages --line-number "^# END_OF_HEADER" "${0}" | command head -1 | cut --fields=1 --delimiter=:)
-    script_name="$(command basename "${0}")"
-    script_dir="$(command cd "$(command dirname "${0}")" && command pwd )"
+    script_head=$(grep --no-messages --line-number "^# END_OF_HEADER" "${0}" | head -1 | cut --fields=1 --delimiter=:)
+    script_name="$(basename "${0}")"
+    script_dir="$(cd "$(dirname "${0}")" && pwd )"
     script_path="${script_dir?}/${script_name}"
     script_params="${*}"
 
     script_logfile="${script_dir}/logs/install.log" # default is '/dev/null'
     script_loglevel=3  # default is 3
 
-    script_tempdir=$(command mktemp --directory -t tmp.XXXXXXXXXX)
-    script_tempfile=$(command mktemp -t tmp.XXXXXXXXXX)
+    script_tempdir=$(mktemp --directory -t tmp.XXXXXXXXXX)
+    script_tempfile=$(mktemp -t tmp.XXXXXXXXXX)
 
-    command mkdir --parents "$(command dirname "${script_logfile}")" \
+    mkdir --parents "$(dirname "${script_logfile}")" \
         || {
             local exit_code="${?}"
-            command printf "Failed to create log file: \"%s\".\nMake sure it is a valid path and that you have permission to use it." "${script_logfile}" >&2
+            printf "Failed to create log file: \"%s\".\nMake sure it is a valid path and that you have permission to use it." "${script_logfile}" >&2
             exit "${exit_code}"
         }
 
     for file in "${script_dir}"/utils/_*.sh; do
-        if  [[ ! "$(command basename "${file}")" == "_trapper.sh" ]] ; then
+        if  [[ ! "$(basename "${file}")" == "_trapper.sh" ]] ; then
             source "${file}"
         fi
     done
@@ -168,7 +168,7 @@ function script_init() {
 # Script functions
 function set_timezone() {
     # Set Time Zone:
-    command ln --symbolic --force             \
+    ln --symbolic --force             \
         /usr/share/zoneinfo/America/Sao_Paulo \
         /etc/timezone
 
@@ -178,9 +178,9 @@ function set_timezone() {
 
 function set_locale() {
     # Update Locales
-    command sed --expression 's/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' \
+    sed --expression 's/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' \
         --in-place /etc/locale.gen
-    command sed --expression 's/#pt_BR.UTF-8 UTF-8/pt_BR.UTF-8 UTF-8/g' \
+    sed --expression 's/#pt_BR.UTF-8 UTF-8/pt_BR.UTF-8 UTF-8/g' \
         --in-place /etc/locale.gen
 
     # Generate the locales
@@ -200,9 +200,9 @@ function set_network() {
 
     # Hostname
     while true; do
-        command read -r -p "$(do_printf "Set Hostname: ")" user_hostname
+        read -r -p "$(do_printf "Set Hostname: ")" user_hostname
 
-        command read -r -p "$(do_printf "Confirm Hostname \"${user_hostname}\"? ")" yn
+        read -r -p "$(do_printf "Confirm Hostname \"${user_hostname}\"? ")" yn
         case "${yn}" in
             "y" | "yes" )
                 do_println "${user_hostname}" > /etc/hostname
@@ -214,9 +214,9 @@ function set_network() {
 
     # Pretty Hostname
     while true; do
-        command read -r -p "$(do_printf "Set Pretty Hostname: ")" user_pretty_hostname
+        read -r -p "$(do_printf "Set Pretty Hostname: ")" user_pretty_hostname
 
-        command read -r -p "$(do_printf "Confirm Pretty Hostname \"${user_pretty_hostname}\"? ")" yn
+        read -r -p "$(do_printf "Confirm Pretty Hostname \"${user_pretty_hostname}\"? ")" yn
         case "${yn}" in
             "y" | "yes" )
                 {
@@ -224,7 +224,7 @@ function set_network() {
                     do_println "ICON_NAME=computer"
                     do_println "CHASSIS=desktop"
                     do_println "DEPLOYMENT=production"
-                } | command tee /etc/machine-info
+                } | tee /etc/machine-info
                 break
                 ;;
             * )
@@ -241,12 +241,12 @@ function set_network() {
         do_println "127.0.0.1      localhost"
         do_println "::1            localhost"
         do_println "127.0.1.1      ${user_hostname}.localhost   ${user_hostname}"
-    } | command tee /etc/hosts
+    } | tee /etc/hosts
 
     # Install && Enable Network Manager and DHCP
-    command pacman --sync networkmanager dhcpcd --noconfirm
-    command systemctl enable NetworkManager.service
-    command systemctl enable dhcpcd.service
+    pacman --sync networkmanager dhcpcd --noconfirm
+    systemctl enable NetworkManager.service
+    systemctl enable dhcpcd.service
 }
 
 function config_package_manager() {
@@ -261,32 +261,32 @@ function config_package_manager() {
     # Configure pacman.conf
     do_cp --verbose "${script_dir}"/data/backup/pacman.conf.backup \
         /etc/pacman.conf
-    command sed --expression 's/#ParallelDownloads = 5/ParallelDownloads = 5/g' \
+    sed --expression 's/#ParallelDownloads = 5/ParallelDownloads = 5/g' \
         --in-place /etc/pacman.conf
-    command sed --expression 's/#Color/Color/g' --in-place /etc/pacman.conf
+    sed --expression 's/#Color/Color/g' --in-place /etc/pacman.conf
     {
         do_println "\n[multilib]"
         do_println "\nInclude = /etc/pacman.d/mirrorlist"
-    } | command tee --append "/etc/pacman.conf" > /dev/null 2>&1
+    } | tee --append "/etc/pacman.conf" > /dev/null 2>&1
 
-    command pacman --sync --refresh --refresh --noconfirm
-    command pacman --sync archlinux-keyring --noconfirm
+    pacman --sync --refresh --refresh --noconfirm
+    pacman --sync archlinux-keyring --noconfirm
 }
 
 function set_bootloader() {
 
     # Install Packages
-    command pacman --sync grub efibootmgr intel-ucode --noconfirm
+    pacman --sync grub efibootmgr intel-ucode --noconfirm
 
     # Install Grub
-    command grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
+    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB
 
     # Configure Grub
-    command sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
+    sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
         --in-place /etc/default/grub
 
     # Generate the main configuration file
-    command grub-mkconfig -o /boot/grub/grub.cfg
+    grub-mkconfig -o /boot/grub/grub.cfg
 }
 
 function config_sudo() {
@@ -296,7 +296,7 @@ function config_sudo() {
         do_println ""
         do_println "Defaults insults"
         do_println "Defaults lecture = always"
-    } | command tee /etc/sudoers.d/custom
+    } | tee /etc/sudoers.d/custom
 }
 
 function config_files() {
@@ -312,9 +312,9 @@ function set_user() {
     # Create User
 
     while true; do
-        command read -r -p "$(do_println "Enter Username (Login): ")" user_name
+        read -r -p "$(do_println "Enter Username (Login): ")" user_name
 
-        command read -r -p "$(do_println "Confirm \"${user_name}\"? ")" yn
+        read -r -p "$(do_println "Confirm \"${user_name}\"? ")" yn
         case "${yn}" in
             "y" | "yes" ) break ;;
             *           ) :     ;;
@@ -322,17 +322,17 @@ function set_user() {
     done
 
     while true; do
-        command read -r -p "$(do_println "Enter User's Full Name: ")" user_full_name
+        read -r -p "$(do_println "Enter User's Full Name: ")" user_full_name
 
-        command read -r -p "$(do_println "Confirm \"${user_full_name}\"? ")" yn
+        read -r -p "$(do_println "Confirm \"${user_full_name}\"? ")" yn
         case "${yn}" in
             "y" | "yes" ) break ;;
             *           ) :     ;;
         esac
     done
 
-    command useradd --comment "${user_full_name}" --create-home --groups wheel --shell /bin/bash "${user_name}"
-    until command passwd "${user_name}"; do
+    useradd --comment "${user_full_name}" --create-home --groups wheel --shell /bin/bash "${user_name}"
+    until passwd "${user_name}"; do
         warning "Passwords do not match, try again.."
     done
 }
@@ -370,7 +370,7 @@ function config-xdg-base-directory() {
     do_println "XDG_CACHE_HOME  DEFAULT=@{HOME}/.local/cache"
     do_println "XDG_DATA_HOME   DEFAULT=@{HOME}/.local/share"
     do_println "XDG_STATE_HOME  DEFAULT=@{HOME}/.local/state"
-    } | command tee --append /etc/security/pam_env.conf > /dev/null 2>&1
+    } | tee --append /etc/security/pam_env.conf > /dev/null 2>&1
 }
 
 # shellcheck disable=SC1091
@@ -382,12 +382,12 @@ function install-packages() {
     local ans
 
     if [[ "$(id -u)" -eq 0 ]]; then
-        command printf "%s: Script should not run under sudo permission. Exiting...\n" "${script_name}" >&2
+        printf "%s: Script should not run under sudo permission. Exiting...\n" "${script_name}" >&2
         exit 1
     fi
 
     while true; do
-        command read -r -p "$(do_println "\nOptions: [PipeWire(1)] or [PulseAudio(2)]\nChoose Audio Server: ")" ans
+        read -r -p "$(do_println "\nOptions: [PipeWire(1)] or [PulseAudio(2)]\nChoose Audio Server: ")" ans
         case "${ans}" in
             "1" )
                 audio="pipewire"
@@ -400,7 +400,7 @@ function install-packages() {
     done
 
     while true; do
-        command read -r -p "$(do_println "\nOptions: [Qtile(1)] or [Gnome(2)]\nChoose Desktop Environment/Window Manager: ")" ans
+        read -r -p "$(do_println "\nOptions: [Qtile(1)] or [Gnome(2)]\nChoose Desktop Environment/Window Manager: ")" ans
         case "${ans}" in
             "1" ) de="qtile" ; break ;;
             "2" ) de="gnome" ; break ;;
@@ -424,13 +424,13 @@ function install-packages() {
         fi
 
         inf "Installing packages from \"${file}\"."
-        while IFS="" command read -r p <&3 || [ -n "${p}" ]; do
+        while IFS="" read -r p <&3 || [ -n "${p}" ]; do
             trace "Installing \"${p}\", from \"${file}\""
             while true; do
-                command sudo pacman --sync "${p}" --noconfirm || \
-                    command sudo pacman --sync "${p}" || :
+                sudo pacman --sync "${p}" --noconfirm || \
+                    sudo pacman --sync "${p}" || :
 
-                if command sudo pacman -Q "${p}" >/dev/null 2>&1 || command sudo pacman -Qg "${p}" >/dev/null 2>&1; then
+                if sudo pacman -Q "${p}" >/dev/null 2>&1 || sudo pacman -Qg "${p}" >/dev/null 2>&1; then
                     break
                 fi
                 error "An error occurred, trying again.."
@@ -443,21 +443,21 @@ function install-packages() {
         do_cp --verbose --recursive "${script_dir}"/data/home/config/wireplumber "${XDG_CONFIG_HOME}"
     fi
 
-    command source "${script_dir}"/scripts/fonts.sh
-    command source "${script_dir}"/scripts/nvm.sh
+    source "${script_dir}"/scripts/fonts.sh
+    source "${script_dir}"/scripts/nvm.sh
 
     if [[ "${de}" == "qtile" ]]; then
-        command source "${script_dir}"/scripts/picom.sh
+        source "${script_dir}"/scripts/picom.sh
     fi
 
     if [[ "${de}" == "gnome" ]]; then
-        command sudo systemctl enable gdm.service
+        sudo systemctl enable gdm.service
     fi
 
-    command sudo systemctl enable libvirtd.service  # Enable Libvirtd ("Virtualization")
-    command sudo systemctl enable sshd.service      # Enable openssh Service
-    command sudo systemctl enable ufw.service       # Enable firewall Service
-    command sudo ufw enable                         # Enable firewall
+    sudo systemctl enable libvirtd.service  # Enable Libvirtd ("Virtualization")
+    sudo systemctl enable sshd.service      # Enable openssh Service
+    sudo systemctl enable ufw.service       # Enable firewall Service
+    sudo ufw enable                         # Enable firewall
 }
 
 # Section: Main Program
@@ -486,70 +486,70 @@ function main() {
     while [[ "${#}" -gt 0 ]]; do
         case "${1:-}" in
             -l | --log-file )
-                command shift
+                shift
                 local file_path="${1:-}"
                 local filename
                 local directory
 
                 if [[ -z "${file_path}" ]]; then
-                    command printf "%s: missing file operand\n" "${script_name}" >&2
-                    command printf "Try '%s --help' for more information.\n" "${script_name}" >&2
+                    printf "%s: missing file operand\n" "${script_name}" >&2
+                    printf "Try '%s --help' for more information.\n" "${script_name}" >&2
                     exit 1
                 fi
 
-                directory=$(command dirname "${file_path}" 2>/dev/null)
+                directory=$(dirname "${file_path}" 2>/dev/null)
                 if [[ ! "${directory}" =~ ^/ ]]; then
                     directory="${PWD}/${directory}"
                 fi
 
                 if [[ ! "${directory}" =~ ^[a-zA-Z0-9_/\.-]+$ ]]; then
-                    command printf "%s: Invalid directory name\n" "${script_name}" >&2
-                    command printf "Try '%s --help' for more information.\n" "${script_name}" >&2
+                    printf "%s: Invalid directory name\n" "${script_name}" >&2
+                    printf "Try '%s --help' for more information.\n" "${script_name}" >&2
                     exit 1
                 fi
 
-                filename=$(command basename "${file_path}")
+                filename=$(basename "${file_path}")
                 if [[ ! "${filename}" =~ ^[a-zA-Z0-9_/\.-]+$ ]]; then
-                    command printf "%s: Invalid filename\n" "${script_name}" >&2
-                    command printf "Try '%s --help' for more information.\n" "${script_name}" >&2
+                    printf "%s: Invalid filename\n" "${script_name}" >&2
+                    printf "Try '%s --help' for more information.\n" "${script_name}" >&2
                     exit 1
                 fi
 
                 if ! has_write_permission "${directory}"; then
-                    command printf "%s: cannot set log directory to \"%s\": Permission denied" "${script_name}" "${directory}" >&2
+                    printf "%s: cannot set log directory to \"%s\": Permission denied" "${script_name}" "${directory}" >&2
                     exit 1
                 fi
 
-                command mkdir "${directory}" --parents          \
-                    && command touch "${directory}/${filename}" \
+                mkdir "${directory}" --parents          \
+                    && touch "${directory}/${filename}" \
 
                 script_logfile="${file_path}"
                 ;;
             -L | --log-level )
-                command shift
+                shift
                 if [[ ! "${1:-}" =~ ^(0|1|2|3|4|5)$ ]]; then
-                    command printf "%s: Invalid log level\n" "${script_name}" >&2
-                    command printf "Try '%s --help' for more information.\n" "${script_name}" >&2
+                    printf "%s: Invalid log level\n" "${script_name}" >&2
+                    printf "Try '%s --help' for more information.\n" "${script_name}" >&2
                     exit 1
                 fi
                 script_loglevel="${1}"
                 ;;
             -s | --setup )
-                command shift
+                shift
                 if [[ ! "${1:-}" =~ ^(a|arch|p|packages)$ ]]; then
-                    command printf "%s: Invalid option \"%s\"\n" "${script_name}" "${1:-}" >&2
-                    command printf "Try '%s --help' for more information.\n" "${script_name}" >&2
+                    printf "%s: Invalid option \"%s\"\n" "${script_name}" "${1:-}" >&2
+                    printf "Try '%s --help' for more information.\n" "${script_name}" >&2
                     exit 1
                 fi
                 setup="${1}"
                 ;;
             * )
-                command printf "%s: Invalid option \"%s\"\n" "${script_name}" "${1:-}" >&2
-                command printf "Try '%s --help' for more information.\n" "${script_name}" >&2
+                printf "%s: Invalid option \"%s\"\n" "${script_name}" "${1:-}" >&2
+                printf "Try '%s --help' for more information.\n" "${script_name}" >&2
                 exit 1
                 ;;
         esac
-        command shift
+        shift
     done
 
     source "${script_dir}"/utils/_trapper.sh
