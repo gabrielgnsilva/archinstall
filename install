@@ -74,8 +74,6 @@
 #)
 #==============================================================================
 # UTILS
-#
-#
 #    Script "utils/_check_dependencies.sh"    check for missing dependencies
 #
 #    Script "utils/_common_utils.sh"          Handles errors and logging on
@@ -168,7 +166,7 @@ function script_init() {
 # Script functions
 function set_timezone() {
     # Set Time Zone:
-    ln --symbolic --force             \
+    ln --symbolic --force                     \
         /usr/share/zoneinfo/America/Sao_Paulo \
         /etc/timezone
 
