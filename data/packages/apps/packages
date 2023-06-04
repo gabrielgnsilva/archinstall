@@ -1,6 +1,5 @@
-man-db
 man-pages
-texinfo
+man-db
 dosfstools
 pkgfile
 mtools
@@ -41,8 +40,7 @@ code
 libreoffice
 kdenlive
 obs-studio
-noto-fonts-emoji
-lib32-fontconfig
-ttf-liberation
-wqy-zenhei
 shellcheck
+fontconfig
+lib32-fontconfig
+noto-fonts-emoji
