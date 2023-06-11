@@ -3,7 +3,7 @@
 #! THIS FILE MUST BE SOURCED FROM "install" !
 
 (
-    git clone https://aur.archlinux.org/picom-jonaburg-git.git "${script_tempdir}"/picom-jonaburg-git
-    cd "${script_tempdir}"/picom-jonaburg-git || exit 1
+    git clone https://aur.archlinux.org/picom-jonaburg-git.git "${scriptTempDir}"/picom-jonaburg-git
+    cd "${scriptTempDir}"/picom-jonaburg-git || exit 1
     makepkg -si --noconfirm
 )
