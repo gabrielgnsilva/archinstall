@@ -465,7 +465,7 @@ function configPackageManager() {
         --expression 's/#Color/Color/g'                                 \
         --expression 's/#\[multilib\]/\[multilib\]/g'                   \
         --expression "$(( lineNo + 1 ))s/^#//g"                         \
-        --in-place=.bak etc/pacman.conf
+        --in-place=.bak /etc/pacman.conf
 
     println "Population keyring..."
 
