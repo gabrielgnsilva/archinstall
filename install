@@ -440,7 +440,7 @@ function configNetwork() {
         printf "::1         localhost\n"
         printf "127.0.1.1   %s.localhost    " "${hostName}"
         printf "%s\n" "${hostName}"
-    } | tee test/etc/hosts
+    } | tee /etc/hosts
 
     println "Configuring network manager, dhcpcd and openssh..."
 
