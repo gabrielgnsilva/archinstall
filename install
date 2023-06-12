@@ -487,7 +487,7 @@ function configBootloader() {
 
     println "Installing grub..."
 
-    grub-install --target=x86_64-efi --efi-directory=/efi \
+    grub-install --target=x86_64-efi --efi-directory=/boot \
            --bootloader-id=GRUB
 
     println "Configuring grub..."
@@ -497,7 +497,9 @@ function configBootloader() {
 
     grub-mkconfig -o /boot/grub/grub.cfg
 }
+HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)
 
+cryptdevice=UUID=device-UUID:cryptlvm root=/dev/MyVolGroup/root
 function configSudo() {
 
     println "Configuring sudo..."
