@@ -597,7 +597,7 @@ function configUser() {
             --shell /bin/bash           \
             "${userLogin}"
 
-    until passwd "${userLogin}"; do
+    until passwd >&3 "${userLogin}"; do
         println "Passwords do not match, try again..."
     done
 }
