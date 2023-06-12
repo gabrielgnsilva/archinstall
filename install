@@ -39,7 +39,7 @@
 #+
 #=======================================================================
 #/ IMPLEMENTATION
-#-      Version     ${scriptName} 1.1
+#-      Version     ${scriptName} 1.0
 #/      Author      Gabriel Nascimento
 #/      Copyright   Copyright (c) Gabriel Nascimento (gnsilva.com)
 #/      License     MIT License
