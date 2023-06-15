@@ -201,7 +201,6 @@
 
 # Section: Script Initialization
 
-# shellcheck disable=1090
 function _initVariables() {
 
     IFS=$' \t\n'
@@ -396,14 +395,18 @@ function configNetwork() {
     local hostName
     local prettyName
     local yn
+    local prompt
+    local promptConfirm
 
     println "Configuring network..."
 
     println "Configuring hostname..."
 
+    prompt="$(prompt "Input the desired hostname: ")"
+    promptConfirm="$(prompt "Confirm \"${hostName}\" ? [Y/n] ")"
     while true; do
-        read -r -p "$(prompt "Input the desired hostname: ")" hostName
-        read -r -p "$(prompt "Confirm \"${hostName}\" ? [Y/n] ")" yn
+        read -r -p "${prompt}" hostName
+        read -r -p "${promptConfirm}" yn
         case "${yn}" in
             "y" | "yes" )
                 printf "%s\n" "${hostName}" | tee /etc/hostname
@@ -415,9 +418,11 @@ function configNetwork() {
 
     println "Configuring pretty hostname..."
 
+    prompt="$(prompt "Input the desired pretty hostname: ")"
+    promptConfirm="$(prompt "Confirm \"${prettyName}\" ? [Y/n] ")"
     while true; do
-        read -r -p "$(prompt "Input the desired pretty hostname: ")" prettyName
-        read -r -p "$(prompt "Confirm \"${prettyName}\" ? [Y/n] ")" yn
+        read -r -p "${prompt}" prettyName
+        read -r -p "${promptConfirm}" yn
         case "${yn}" in
             "y" | "yes" )
                 {   printf "PRETTY_HOSTNAME=\"%s\"\n" "${prettyName}"
@@ -497,9 +502,7 @@ function configBootloader() {
 
     grub-mkconfig -o /boot/grub/grub.cfg
 }
-HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)
 
-cryptdevice=UUID=device-UUID:cryptlvm root=/dev/MyVolGroup/root
 function configSudo() {
 
     println "Configuring sudo..."
@@ -545,12 +548,16 @@ function configDefaultHomeDirectories() {
 function configXdgBaseDirectory() {
 
     local defEditor
+    local prompt
+    local promptConfirm
 
     println "Configuring xdg base directory..."
 
+    prompt="$(prompt "Enter the desired default editor: ")"
+    promptConfirm="$(prompt "Confirm \"${defEditor}\"? [Y/n] ")"
     while true; do
-        read -r -p "$(prompt "Enter the desired default editor: ")" defEditor
-        read -r -p "$(prompt "Confirm \"${defEditor}\"? [Y/n] ")" yn
+        read -r -p "${prompt}" defEditor
+        read -r -p "${promptConfirm}" yn
         case "${yn}" in
             "y" | "yes" ) break ;;
             *           ) :     ;;
@@ -573,21 +580,27 @@ function configUser() {
     local userLogin
     local userFullName
     local yn
+    local prompt
+    local promptConfirm
 
     println "Adding a new user..."
 
+    prompt="$(prompt "Enter the desired username: ")"
+    promptConfirm="$(prompt "Confirm \"${userLogin}\"? [Y/n] ")"
     while true; do
-        read -r -p "$(prompt "Enter the desired username: ")" userLogin
-        read -r -p "$(prompt "Confirm \"${userLogin}\"? [Y/n] ")" yn
+        read -r -p "${prompt}" userLogin
+        read -r -p "${promptConfirm}" yn
         case "${yn}" in
             "y" | "yes" ) break ;;
             *           ) :     ;;
         esac
     done
 
+    prompt="$(prompt "Enter user's full name: ")"
+    promptConfirm="$(prompt "Confirm \"${userFullName}\"? [Y/n] ")"
     while true; do
-        read -r -p "$(prompt "Enter user's full name: ")" userFullName
-        read -r -p "$(prompt "Confirm \"${userFullName}\"? [Y/n] ")" yn
+        read -r -p "${prompt}" userFullName
+        read -r -p "${promptConfirm}" yn
         case "${yn}" in
             "y" | "yes" ) break ;;
             *           ) :     ;;
@@ -605,10 +618,12 @@ function configUser() {
     done
 }
 
-# shellcheck disable=SC1091
 function installPackages() {
 
-    if [[ "$(id -u)" -eq 0 ]]; then
+    local userId
+    userId="$(id -u)"
+
+    if [[ "${userId}" -eq 0 ]]; then
         println "${scriptName}: this script should not be run with sudo or" \
             "root privileges"
         exit 1
@@ -620,10 +635,12 @@ function installPackages() {
     local de
     local p
     local yn
+    local prompt
 
+    prompt="$(prompt "Choose audio server: ") "
     while true; do
         println "\nOptions: [PipeWire(1)] or [PulseAudio(2)]"
-        read -r -p "$(prompt "Choose audio server: ") " yn
+        read -r -p "${prompt}" yn
         case "${yn,,}" in
             "1" | "pipewire" )
                 audioServer="pipewire"
@@ -637,9 +654,10 @@ function installPackages() {
         esac
     done
 
+    prompt="$(prompt "Choose Desktop Environment/Window Manager: ")"
     while true; do
         println "\nOptions: [Qtile(1)] or [Gnome(2)]"
-        read -r -p "$(prompt "Choose Desktop Environment/Window Manager: ")" yn
+        read -r -p "${prompt}" yn
         case "${yn,,}" in
             "1" | "qtile" )
                 de="qtile"
@@ -731,7 +749,6 @@ function installPackages() {
 
 # Section: Main Program
 
-# shellcheck disable=SC1091
 function _main() {
 
     if [[ "${#}" -lt 1 ]]; then
