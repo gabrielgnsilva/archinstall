@@ -237,7 +237,7 @@ Use pacstrap to install the base package, Linux kernel, firmware for common hard
 ```bash
 #!/bin/bash
 
-pacstrap -K /mnt base base-devel linux linux-firmware linux-firmware-qlogic sof-firmware micro git dhcpcd openssh lvm2
+pacstrap -K /mnt base base-devel linux linux-firmware linux-firmware-qlogic sof-firmware vim git dhcpcd openssh lvm2
 ```
 
 ### Generate fstab
