@@ -395,17 +395,17 @@ function configNetwork() {
     local hostName
     local prettyName
     local yn
-    local prompt
+    local promptInput
     local promptConfirm
 
     println "Configuring network..."
 
     println "Configuring hostname..."
 
-    prompt="$(prompt "Input the desired hostname: ")"
-    promptConfirm="$(prompt "Confirm \"${hostName}\" ? [Y/n] ")"
+    promptInput="$(prompt "Input the desired hostname: ")"
     while true; do
-        read -r -p "${prompt}" hostName
+        read -r -p "${promptInput}" hostName
+        promptConfirm="$(prompt "Confirm \"${hostName}\" ? [Y/n] ")"
         read -r -p "${promptConfirm}" yn
         case "${yn}" in
             "y" | "yes" )
@@ -418,10 +418,10 @@ function configNetwork() {
 
     println "Configuring pretty hostname..."
 
-    prompt="$(prompt "Input the desired pretty hostname: ")"
-    promptConfirm="$(prompt "Confirm \"${prettyName}\" ? [Y/n] ")"
+    promptInput="$(prompt "Input the desired pretty hostname: ")"
     while true; do
-        read -r -p "${prompt}" prettyName
+        read -r -p "${promptInput}" prettyName
+        promptConfirm="$(prompt "Confirm \"${prettyName}\" ? [Y/n] ")"
         read -r -p "${promptConfirm}" yn
         case "${yn}" in
             "y" | "yes" )
@@ -548,15 +548,15 @@ function configDefaultHomeDirectories() {
 function configXdgBaseDirectory() {
 
     local defEditor
-    local prompt
+    local promptInput
     local promptConfirm
 
     println "Configuring xdg base directory..."
 
-    prompt="$(prompt "Enter the desired default editor: ")"
-    promptConfirm="$(prompt "Confirm \"${defEditor}\"? [Y/n] ")"
+    promptInput="$(prompt "Enter the desired default editor: ")"
     while true; do
-        read -r -p "${prompt}" defEditor
+        read -r -p "${promptInput}" defEditor
+        promptConfirm="$(prompt "Confirm \"${defEditor}\"? [Y/n] ")"
         read -r -p "${promptConfirm}" yn
         case "${yn}" in
             "y" | "yes" ) break ;;
@@ -580,15 +580,15 @@ function configUser() {
     local userLogin
     local userFullName
     local yn
-    local prompt
+    local promptInput
     local promptConfirm
 
     println "Adding a new user..."
 
-    prompt="$(prompt "Enter the desired username: ")"
-    promptConfirm="$(prompt "Confirm \"${userLogin}\"? [Y/n] ")"
+    promptInput="$(prompt "Enter the desired username: ")"
     while true; do
-        read -r -p "${prompt}" userLogin
+        read -r -p "${promptInput}" userLogin
+        promptConfirm="$(prompt "Confirm \"${userLogin}\"? [Y/n] ")"
         read -r -p "${promptConfirm}" yn
         case "${yn}" in
             "y" | "yes" ) break ;;
@@ -596,10 +596,10 @@ function configUser() {
         esac
     done
 
-    prompt="$(prompt "Enter user's full name: ")"
-    promptConfirm="$(prompt "Confirm \"${userFullName}\"? [Y/n] ")"
+    promptInput="$(prompt "Enter user's full name: ")"
     while true; do
-        read -r -p "${prompt}" userFullName
+        read -r -p "${promptInput}" userFullName
+        promptConfirm="$(prompt "Confirm \"${userFullName}\"? [Y/n] ")"
         read -r -p "${promptConfirm}" yn
         case "${yn}" in
             "y" | "yes" ) break ;;
@@ -635,12 +635,12 @@ function installPackages() {
     local de
     local p
     local yn
-    local prompt
+    local promptInput
 
-    prompt="$(prompt "Choose audio server: ") "
+    promptInput="$(prompt "Choose audio server: ") "
     while true; do
         println "\nOptions: [PipeWire(1)] or [PulseAudio(2)]"
-        read -r -p "${prompt}" yn
+        read -r -p "${promptInput}" yn
         case "${yn,,}" in
             "1" | "pipewire" )
                 audioServer="pipewire"
@@ -654,10 +654,10 @@ function installPackages() {
         esac
     done
 
-    prompt="$(prompt "Choose Desktop Environment/Window Manager: ")"
+    promptInput="$(prompt "Choose Desktop Environment/Window Manager: ")"
     while true; do
         println "\nOptions: [Qtile(1)] or [Gnome(2)]"
-        read -r -p "${prompt}" yn
+        read -r -p "${promptInput}" yn
         case "${yn,,}" in
             "1" | "qtile" )
                 de="qtile"
