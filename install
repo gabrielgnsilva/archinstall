@@ -1,0 +1,826 @@
+#!/bin/bash
+
+#=======================================================================
+# HEADER
+#=======================================================================
+#% NAME
+#%      Arch Install - Install and Setup Arch Linux.
+#%
+#=======================================================================
+#% SYNOPSIS
+#+      ${scriptName} [OPTION]... [ARGUMENT]...
+#+
+#=======================================================================
+#% DESCRIPTION
+#+      This is a shell script that sets up a Arch Linux system by
+#+      configuring various settings and/or installing packages.
+#+
+#=======================================================================
+#+ OPTIONS
+#+      -h, --help          Display this help message and exit
+#%
+#+      -v, --version       Display version information and exit
+#%
+#+      -l, --log-file      Custom log file location
+#%                          Regex: ^[a-zA-Z0-9_/\.-]+$
+#%
+#+      -s, --setup         Setup Arch Linux
+#%                              a | arch     -> Install Arch Linux
+#%                                              (While in arch-chroot)
+#%                              p | packages -> Install packages
+#+
+#=======================================================================
+#+ EXAMPLES
+#%      Example usages of ${scriptName}.
+#+
+#+      $ ${scriptName} -l script.log -s arch
+#%          This example shows how to use the script with the log file
+#%          set to "script.log", and -s option that installs Arch Linux.
+#+
+#=======================================================================
+#/ IMPLEMENTATION
+#-      Version     ${scriptName} 1.0
+#/      Author      Gabriel Nascimento
+#/      Copyright   Copyright (c) Gabriel Nascimento (gnsilva.com)
+#/      License     MIT License
+#/
+#=======================================================================
+#) COPYRIGHT
+#)      Copyright (c) 2023 Gabriel Nascimento:
+#)      <https://opensource.org/licenses/MIT>.
+#)
+#)      Permission is hereby granted, free of charge, to any person
+#)      obtaining a copy of this software and associated documentation
+#)      files (the "Software"), to deal in the Software without
+#)      restriction, including without limitation the rights to use,
+#)      copy, modify, merge, publish, distribute, sublicense, and/or
+#)      sell copies of the Software, and to permit persons to whom the
+#)      Software is furnished to do so, subject to the following
+#)      conditions:
+#)
+#)      The above copyright notice and this permission notice shall be
+#)      included in all copies or substantial portions of the Software.
+#)
+#)      THE SOFTWARE IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND,
+#)      EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+#)      OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+#)      NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+#)      HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+#)      WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+#)      FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+#)      OTHER DEALINGS IN THE SOFTWARE.
+#)
+#=======================================================================
+# UTILS
+#       Script "utils/_checkDependencies.sh"
+#           Check if a given package exists
+#
+#       Script "utils/_create.sh"
+#           Creates a file or a folder, if it does not exist
+#
+#       Script "utils/_doCountdown.sh"
+#           Perform a countdown for the specified number of seconds
+#
+#       Script "utils/_displayHelp.sh"
+#           Handles the help messages, either full or usage,
+#           from the info on this header
+#
+#       Script "utils/_validateArguments.sh"
+#           Used to validate a string or argument
+#
+#       Script "utils/_hasWritePermission.sh"
+#           Check if user has write permission on a given folder
+#
+#       Trap "DEBUG"
+#           This script uses a DEBUG trap when "_initLogger" is called,
+#           which prints the output of all commands to a log file, and
+#           by default it also does not print stderr and stdout
+#           on the terminal, unless explicitly told to
+#
+#           To print command output on the terminal, redirect the output
+#           to FD3 (eg: command >&3). Some commands like package
+#           managers output to both stdout and stderr and may ask for
+#           user input. In this case, redirect both FD1 and FD2 to FD3,
+#           otherwise the user will not be aware of the command asking
+#           for input (eg: command >&3 2>&3)
+#
+#           If you need to display a text on the terminal,
+#           you can use the function "println", which redirects printf
+#           to FD3, thus making it easier to type and distinguish which
+#           text get shown to the user (eg: "println [MESSAGE]...")
+#
+#           You can use the function "log [MESSAGE]..." to ouput a
+#           formated log message, prefixed with "+++" and the line
+#           number to the log file. Otherwise, use echo or printf
+#           command without a FD set
+#
+#           When presenting a user or a system with a specific message,
+#           question, or request in order to elicit a response or input,
+#           make sure to also redirect the message to FD3, otherwise it
+#           will not output to the user
+#           (eg: 'read -r -p "Input: " ans >&3')
+#
+#           If you need to request input from the user, you can use the
+#           function "prompt", which redirects printf to FD3, thus
+#           making it easier to redirect multiple prompts
+#           (eg 'read -r -p "$(prompt "Input: ")" ans')
+#
+#=======================================================================
+# DEBUG OPTIONS
+    set +o xtrace
+#       Trace the execution of the script (DEBUG)
+
+    set +o noexec
+#       Don't execute commands (Ignored by interactive shells)
+#
+#=======================================================================
+# BASH OPTIONS
+    set -o nounset  # Exposes unset variables
+    set -o errexit  # Exit upon error, avoiding cascading errors
+    set -o pipefail  # Unveils hidden failures
+    set -o noclobber  # Avoid overwriting files (eg: echo "hi" > foo)
+    set -o errtrace  # Inherit trap on ERR to functions and commands
+    shopt -s nullglob  # Non-matching globs are removed ('*.foo' => '')
+    shopt -s failglob  # Non-matching globs throw errors
+    shopt -u nocaseglob  # Case insensitive globs
+    shopt -s dotglob  # Wildcards match hidden files
+    shopt -s globstar  # Recursive matches ('a/**/*.e' => 'a/b/c/d.e')
+#
+#=======================================================================
+# TRAPS
+    function _setTraps() {
+
+        trap '{ set +o xtrace; } 2>/dev/null                     \
+            ; PS4="+ [$(date +"%d/%m/%Y %H:%M:%S")] ${LINENO}: " \
+            ; set -o xtrace' DEBUG
+
+        trap "" SIGTSTP
+        trap _exitTrap EXIT
+        trap _ctrlC INT
+        trap _errTrapper ERR
+    }
+
+    function _ctrlC() {
+        trap "" INT  # Disable trap on CTRL_C to prevent recursion
+
+        println "\nInterrupt signal intercepted! Exiting now..."
+        exit 130
+    }
+
+    function _errTrapper() {
+
+        local exitCode="${?}"
+
+        trap "" ERR  # Disable trap on ERR to prevent recursion
+
+        println "${scriptName}: an exception occurred during execution"
+        println "Check the log file \"${scriptLogFile}\" for details."
+
+        exit "${exitCode:-1}"
+    }
+
+    function _exitTrap() {
+
+        local exitCode="${?}"
+
+        trap '' EXIT  # Disable trap on EXIT to prevent recursion
+
+        rm --recursive --force  \
+            "${scriptTempDir}"  \
+            "${scriptTempFile}"
+
+        cd "${currentDir}"
+
+        log "Script Terminated with exit status: ${exitCode:-1}"
+        exit "${exitCode:-1}"
+    }
+#
+#=======================================================================
+#: END_OF_HEADER
+#=======================================================================
+
+# Section: Script Initialization
+
+function _initVariables() {
+
+    IFS=$' \t\n'
+
+    currentDir="${PWD}"
+
+    scriptParams=( "${@}" )
+    scriptName="$(basename "${0}")"
+    scriptDir="$(cd "$(dirname "${0}")" && pwd )"
+    scriptPath="${scriptDir:?}/${scriptName:?}"
+    scriptHead=$(grep --no-messages --line-number "^#: END" "${0}" \
+        | head -1 \
+        | cut --fields=1 --delimiter=:
+    )
+
+    scriptTempDir=$(mktemp --directory -t tmp.XXXXXXXXXX)
+    scriptTempFile=$(mktemp -t tmp.XXXXXXXXXX)
+
+    scriptLogFile="${scriptDir}"/logs/script.log
+    mkdir --parents "$(dirname "${scriptLogFile}")" \
+        || { local exitCode="${?}"
+             printf "\nFailed to create log file on default directory: " >&2
+             printf "\"%s\"" "${scriptLogFile}" >&2
+             printf "\nMake sure it is a valid path and " >&2
+             printf "that you have write permission.\n" >&2
+             exit "${exitCode}"
+           }
+
+    msgInvalid="${scriptName}: invalid option"
+    msgTryHelp="Try '${scriptName} --help' for more information."
+}
+
+# shellcheck disable=1090
+function _initUtils() {
+    local script
+    for script in "${scriptDir}"/utils/_*.sh; do
+        source "${script}"
+    done
+}
+
+function _initLogger() {
+    local filePath
+    local filename
+    local directory
+    local parentDir
+    local dir
+    local argUsed=false
+    local valuesToRemove=()
+    local filteredParams=()
+
+    while [[ "${#}" -gt 0 ]]; do
+        case "${1:-}" in
+            -l | --log-file )
+                if [[ "${argUsed}" == true ]]; then
+                    printf "%s: too much arguments\n" "${scriptName}" >&2
+                    printf "%s\n" "${msgTryHelp}" >&2
+                    exit 1
+                fi
+                shift
+
+                filePath="${1:-}"
+                if [[ -z "${filePath}" ]]; then
+                    printf "%s: missing file operand\n" "${scriptName}" >&2
+                    printf "%s\n" "${msgTryHelp}" >&2
+                    exit 1
+                fi
+
+                directory=$(dirname "${filePath}" 2>/dev/null)
+                if [[ ! "${directory}" =~ ^/ ]]; then
+                    directory="${PWD?}/${directory}"
+                fi
+
+                filename=$(basename "${filePath}")
+                if [[ ! "${directory}" =~ ^[a-zA-Z0-9_/\.-]+$          \
+                    || ! "${filename}" =~ ^[a-zA-Z0-9_/\.-]+$ ]]; then
+
+                    printf "%s: invalid file or directory name\n" \
+                        "${scriptName}" >&2
+                    printf "%s\n" "${msgTryHelp}" >&2
+                    exit 1
+                fi
+
+                dir="${directory}"
+                while true; do
+                    if [[ -w "${dir}" ]]; then
+                        break
+                    fi
+
+                    parentDir=$(dirname "${dir}")
+                    if [[ "${parentDir}" == "${dir}" ]]; then
+                        printf "%s: " "${scriptName}" >&2
+                        printf "cannot set log directory to " >&2
+                        printf "\"%s\"" "${directory}" >&2
+                        printf ": permission Denied\n" >&2
+                        exit 1
+                    fi
+
+                    dir="${parentDir}"
+                done
+
+                mkdir "${directory}" --parents            \
+                    && touch "${directory:?}/${filename}" \
+
+                scriptLogFile="${filePath}"
+                argUsed=true
+
+                valuesToRemove=( "-l" "--log-file" "${filePath}" )
+                for element in "${scriptParams[@]}"; do
+                    # Check if the element is in the list of values to remove
+                    if [[ ! "${valuesToRemove[*]}" == *"${element}"* ]]; then
+                        filteredParams+=("${element}")
+                    fi
+                done
+                scriptParams=( "${filteredParams[@]}" )
+                ;;
+            * )
+                :
+                ;;
+        esac
+        shift
+    done
+
+    cp /dev/null "${scriptLogFile}"
+    exec 3>&1 1>>"${scriptLogFile}" 2>&1
+}
+
+function _traceVariables() {
+
+    log "Origin cwd: ${currentDir}"
+    log "Script parameter: ${scriptParams[*]}"
+    log "Script name: ${scriptName}"
+    log "Script directory: ${scriptDir}"
+    log "Script path: ${scriptPath}"
+    log "Script head size: ${scriptHead}"
+    log "Script temp directory: ${scriptTempDir}"
+    log "Script temp file: ${scriptTempFile}"
+    log "Script log file: ${scriptLogFile}"
+    log "Message invalid: ${msgInvalid}"
+    log "Message try help: ${msgTryHelp}"
+}
+
+# Section: Script Helper Functions
+
+function log() {
+
+    command printf "+++ (%s): %b\n" "${BASH_LINENO[0]}" "${*}"
+}
+
+function println() {
+
+    command printf "%b\n" "${*}" >&3
+}
+
+function prompt() {
+    command printf "%s" "${*}" >&3
+}
+
+# Section: Script Functions
+
+function configTimezone() {
+
+    println "Configuring time zone and hwclock..."
+
+    ln --symbolic --force --verbose           \
+        /usr/share/zoneinfo/America/Sao_Paulo \
+        /etc/timezone
+    hwclock --systohc --verbose
+}
+
+function configLocale() {
+
+    println "Configuring locale..."
+
+    sed --expression 's/#en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/g' \
+        --expression 's/#pt_BR.UTF-8 UTF-8/pt_BR.UTF-8 UTF-8/g' \
+        --in-place /etc/locale.gen
+
+    locale-gen
+
+    printf "LANG=en_US.UTF-8\n" | tee /etc/locale.conf
+}
+
+function configKeyboardLayout() {
+
+    println "Configuring keyboard layout..."
+
+    printf "KEYMAP=us-acentos\n" | tee /etc/vconsole.conf
+}
+
+function configNetwork() {
+
+    local hostName
+    local prettyName
+    local yn
+    local promptInput
+    local promptConfirm
+
+    println "Configuring network..."
+
+    println "Configuring hostname..."
+
+    promptInput="$(prompt "Input the desired hostname: ")"
+    while true; do
+        read -r -p "${promptInput}" hostName
+        promptConfirm="$(prompt "Confirm \"${hostName}\" ? [Y/n] ")"
+        read -r -p "${promptConfirm}" yn
+        case "${yn}" in
+            "y" | "yes" )
+                printf "%s\n" "${hostName}" | tee /etc/hostname
+                break
+                ;;
+            * ) : ;;
+        esac
+    done
+
+    println "Configuring pretty hostname..."
+
+    promptInput="$(prompt "Input the desired pretty hostname: ")"
+    while true; do
+        read -r -p "${promptInput}" prettyName
+        promptConfirm="$(prompt "Confirm \"${prettyName}\" ? [Y/n] ")"
+        read -r -p "${promptConfirm}" yn
+        case "${yn}" in
+            "y" | "yes" )
+                {   printf "PRETTY_HOSTNAME=\"%s\"\n" "${prettyName}"
+                    printf "ICON_NAME=computer\n"
+                    printf "CHASSIS=desktop\n"
+                    printf "DEPLOYMENT=production\n"
+                } | tee /etc/machine-info
+                break
+                ;;
+            * ) : ;;
+        esac
+    done
+
+    println "Configuring hosts..."
+
+    {   printf "# Static table lookup for hostnames.\n"
+        printf "# See hosts(5) for details\n"
+        printf "\n"
+        printf "127.0.0.1   localhost\n"
+        printf "::1         localhost\n"
+        printf "127.0.1.1   %s.localhost    " "${hostName}"
+        printf "%s\n" "${hostName}"
+    } | tee /etc/hosts
+
+    println "Configuring network manager, dhcpcd and openssh..."
+
+    pacman --sync networkmanager dhcpcd openssh --noconfirm
+    systemctl enable NetworkManager.service
+    systemctl enable dhcpcd.service
+    systemctl enable sshd.service
+}
+
+function configPackageManager() {
+
+    local lineNo
+
+    println "Configuring package manager..."
+
+    lineNo=$(grep --line-number "\[multilib\]" /etc/pacman.conf \
+        | head -1                                               \
+        | cut --fields=1 --delimiter=:
+    )
+
+    sed --expression 's/#ParallelDownloads = 5/ParallelDownloads = 5/g' \
+        --expression 's/#Color/Color/g'                                 \
+        --expression 's/#\[multilib\]/\[multilib\]/g'                   \
+        --expression "$(( lineNo + 1 ))s/^#//g"                         \
+        --in-place=.bak /etc/pacman.conf
+
+    println "Population keyring..."
+
+    pacman-key --init
+    pacman-key --populate archlinux
+
+    println "Updating package list..."
+
+    pacman --sync --refresh --refresh --noconfirm
+}
+
+function configBootloader() {
+
+    println "Configuring bootloader..."
+
+    println "Downloading packages..."
+
+    pacman --sync grub efibootmgr intel-ucode --noconfirm
+
+    println "Installing grub..."
+
+    grub-install --target=x86_64-efi --efi-directory=/boot \
+           --bootloader-id=GRUB --recheck
+
+    println "Configuring grub..."
+
+    sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
+        --in-place /etc/default/grub
+
+    grub-mkconfig -o /boot/grub/grub.cfg
+}
+
+function configSudo() {
+
+    println "Configuring sudo..."
+
+    {   printf "%%wheel     ALL=(ALL:ALL) ALL\n"
+        printf "\n"
+        printf "Defaults lecture = always\n"
+        printf "Defaults insults\n"
+    } | tee /etc/sudoers.d/custom
+}
+
+function configFiles() {
+
+    println "Moving config files..."
+
+    cp --recursive --verbose "${scriptDir}"/data/etc /
+}
+
+function configDefaultHomeDirectories() {
+
+    println "Configuring default home directories..."
+
+    mkdir --verbose /etc/skel/Desktop
+    mkdir --verbose /etc/skel/Documents
+    mkdir --verbose /etc/skel/Downloads
+    mkdir --verbose /etc/skel/Music
+    mkdir --verbose /etc/skel/Pictures
+    mkdir --verbose /etc/skel/Pictures/Screenshots
+    mkdir --verbose /etc/skel/Pictures/Wallpapers
+    mkdir --verbose /etc/skel/Projects
+    mkdir --verbose /etc/skel/Public
+    mkdir --verbose /etc/skel/Repositories
+    mkdir --verbose /etc/skel/Templates
+    mkdir --verbose /etc/skel/Videos
+    mkdir --verbose /etc/skel/Virtual\ Machines
+    mkdir --verbose /etc/skel/Virtual\ Machines/Disks
+    mkdir --verbose /etc/skel/Virtual\ Machines/Images
+    mkdir --verbose /etc/skel/.config
+    mkdir --verbose /etc/skel/.local
+    mkdir --verbose /etc/skel/.local/bin
+}
+
+function configXdgBaseDirectory() {
+
+    local defEditor
+    local promptInput
+    local promptConfirm
+
+    println "Configuring xdg base directory..."
+
+    promptInput="$(prompt "Enter the desired default editor: ")"
+    while true; do
+        read -r -p "${promptInput}" defEditor
+        promptConfirm="$(prompt "Confirm \"${defEditor}\"? [Y/n] ")"
+        read -r -p "${promptConfirm}" yn
+        case "${yn}" in
+            "y" | "yes" ) break ;;
+            *           ) :     ;;
+        esac
+    done
+
+    {   printf "\n"
+        printf "# Default Editor\n"
+        printf "EDITOR=%s\n" "${defEditor}"
+        printf "\n"
+        printf "# XDG Base Directory\n"
+        printf "XDG_CONFIG_HOME DEFAULT=@{HOME}/.config\n"
+        printf "XDG_CACHE_HOME  DEFAULT=@{HOME}/.local/cache\n"
+        printf "XDG_DATA_HOME   DEFAULT=@{HOME}/.local/share\n"
+        printf "XDG_STATE_HOME  DEFAULT=@{HOME}/.local/state\n"
+    } | tee --append /etc/security/pam_env.conf
+}
+
+function configUser() {
+    local userLogin
+    local userFullName
+    local yn
+    local promptInput
+    local promptConfirm
+
+    println "Adding a new user..."
+
+    promptInput="$(prompt "Enter the desired username: ")"
+    while true; do
+        read -r -p "${promptInput}" userLogin
+        promptConfirm="$(prompt "Confirm \"${userLogin}\"? [Y/n] ")"
+        read -r -p "${promptConfirm}" yn
+        case "${yn}" in
+            "y" | "yes" ) break ;;
+            *           ) :     ;;
+        esac
+    done
+
+    promptInput="$(prompt "Enter user's full name: ")"
+    while true; do
+        read -r -p "${promptInput}" userFullName
+        promptConfirm="$(prompt "Confirm \"${userFullName}\"? [Y/n] ")"
+        read -r -p "${promptConfirm}" yn
+        case "${yn}" in
+            "y" | "yes" ) break ;;
+            *           ) :     ;;
+        esac
+    done
+
+    useradd --comment "${userFullName}" \
+            --create-home               \
+            --groups wheel              \
+            --shell /bin/bash           \
+            "${userLogin}"
+
+    until passwd 2>&3 "${userLogin}"; do
+        println "Passwords do not match, try again..."
+    done
+}
+
+function installPackages() {
+
+    local userId
+    userId="$(id -u)"
+
+    if [[ "${userId}" -eq 0 ]]; then
+        println "${scriptName}: this script should not be run with sudo or" \
+            "root privileges"
+        exit 1
+    fi
+
+    local file
+    local filePath=()
+    local audioServer
+    local de
+    local p
+    local yn
+    local promptInput
+
+    promptInput="$(prompt "Choose audio server: ") "
+    while true; do
+        println "\nOptions: [PipeWire(1)] or [PulseAudio(2)]"
+        read -r -p "${promptInput}" yn
+        case "${yn,,}" in
+            "1" | "pipewire" )
+                audioServer="pipewire"
+                break
+                ;;
+            "2" | "pulseaudio" )
+                audioServer="pulseaudio"
+                break
+                ;;
+            * ) : ;;
+        esac
+    done
+
+    promptInput="$(prompt "Choose Desktop Environment/Window Manager: ")"
+    while true; do
+        println "\nOptions: [Qtile(1)] or [Gnome(2)]"
+        read -r -p "${promptInput}" yn
+        case "${yn,,}" in
+            "1" | "qtile" )
+                de="qtile"
+                break
+                ;;
+            "2" | "gnome" )
+                de="gnome"
+                break
+                ;;
+            * ) : ;;
+        esac
+    done
+
+    filePath=(
+        "${scriptDir}/data/packages/drivers/gpu/amd"
+        "${scriptDir}/data/packages/displayServer/xorg"
+        "${scriptDir}/data/packages/desktopEnvironment/${de}"
+        "${scriptDir}/data/packages/audio/${audioServer}"
+        "${scriptDir}/data/packages/apps/packages"
+    )
+
+    for file in "${filePath[@]}"; do
+        if [[ ! -f "${file}" ]]; then
+            log "Skypping file: '${file}': not a file"
+            continue
+        fi
+
+        println "Installing $(basename "${file}")..."
+
+        doCountdown 5 >&3
+        while IFS="" read -r p <&4 || [[ -n "${p}" ]]; do
+            while true; do
+                sudo pacman --sync "${p}" --noconfirm   \
+                    --disable-download-timeout >&3 2>&3 \
+                || sudo pacman --sync "${p}"            \
+                    --disable-download-timeout >&3 2>&3 \
+                || :
+
+                if sudo pacman -Q "${p}" || sudo pacman -Qg "${p}"; then
+                    break
+                fi
+                log "An error occurred while installing ${p}, trying again..."
+            done
+        done 4< "${file}"
+    done
+
+    println "Packages successfully installed... "
+
+    if [[ "${audioServer}" == "pipewire" ]]; then
+
+        println "Moving pipewire config files... "
+
+        cp --recursive --force "${scriptDir}"/data/home/config/pipewire \
+            "${XDG_CONFIG_HOME}"
+        cp --recursive --force "${scriptDir}"/data/home/config/wireplumber \
+            "${XDG_CONFIG_HOME}"
+    fi
+
+    println "Intalling fonts..."
+
+    source "${scriptDir}"/scripts/fonts.sh
+
+    println "Intalling nvm..."
+
+    source "${scriptDir}"/scripts/nvm.sh
+
+    if [[ "${de}" == "qtile" ]]; then
+
+        println "Configuring picom..."
+
+        source "${scriptDir}"/scripts/picom.sh
+    fi
+
+    if [[ "${de}" == "gnome" ]]; then
+
+        println "Configuring gnome..."
+
+        sudo systemctl enable gdm.service
+    fi
+
+    println "Enabling services (libvirtd, sshd and ufw)..."
+
+    sudo systemctl enable libvirtd.service  # Enable Libvirtd ("Virtualization")
+    sudo systemctl enable sshd.service      # Enable openssh Service
+    sudo systemctl enable ufw.service       # Enable firewall Service
+    sudo ufw enable                         # Enable firewall
+}
+
+
+# Section: Main Program
+
+function _main() {
+
+    if [[ "${#}" -lt 1 ]]; then
+        displayHelpUsage >&3
+        exit 0
+    fi
+
+    local i
+    for i in "${@}"; do
+        case "${i}" in
+            -h | --help | help )
+                displayFullHelp >&3
+                exit 0
+                ;;
+            -v | --version | version )
+                displayVersion >&3
+                exit 0
+                ;;
+                * ) : ;;
+        esac
+    done
+
+    local setup
+
+    cd "${scriptDir}" || exit 1
+    while [[ "${#}" -gt 0 ]]; do
+        case "${1:-}" in
+            -s | --setup )
+                shift
+                if [[ ! "${1:-}" =~ ^(a|arch|p|packages)$ ]]; then
+                    println "${msgInvalid} \"${1:-}\""
+                    println "${msgTryHelp}"
+                    exit 1
+                fi
+                setup="${1}"
+                ;;
+            * )
+                println "${msgInvalid} \"${1:-}\""
+                println "${msgTryHelp}"
+                exit 1
+                ;;
+        esac
+        shift
+    done
+
+    if [[ "${setup}" =~ ^(a|arch)$ ]]; then
+        configTimezone
+        configLocale
+        configKeyboardLayout
+        configNetwork
+        configPackageManager
+        configBootloader
+        configSudo
+        configFiles
+        configDefaultHomeDirectories
+        configXdgBaseDirectory
+        configUser
+    fi
+
+    if [[ "${setup}" =~ ^(p|packages)$ ]]; then
+        installPackages
+    fi
+
+    println "${scriptName}: script completed successfully"
+}
+
+# Invoke main with args only if not sourced
+if ! (return 0 2> /dev/null); then
+    _initVariables "${@}"
+    _initLogger "${@}"
+    _initUtils
+    _setTraps
+    _traceVariables "${@}"
+    _main "${scriptParams[@]}"
+fi
