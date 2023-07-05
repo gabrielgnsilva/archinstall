@@ -656,14 +656,18 @@ function installPackages() {
 
     promptInput="$(prompt "Choose Desktop Environment/Window Manager: ")"
     while true; do
-        println "\nOptions: [Qtile(1)] or [Gnome(2)]"
+        println "\nOptions: [Qtile(1)], [KDE Plasma(2)] or [Gnome(3)]"
         read -r -p "${promptInput}" yn
         case "${yn,,}" in
             "1" | "qtile" )
                 de="qtile"
                 break
                 ;;
-            "2" | "gnome" )
+            "2" | "kde" | "kde plasma" )
+                de="kde"
+                break
+                ;;
+            "3" | "gnome" )
                 de="gnome"
                 break
                 ;;
@@ -724,18 +728,18 @@ function installPackages() {
 
     source "${scriptDir}"/scripts/nvm.sh
 
-    if [[ "${de}" == "qtile" ]]; then
-
-        println "Configuring picom..."
-
-        source "${scriptDir}"/scripts/picom.sh
-    fi
-
     if [[ "${de}" == "gnome" ]]; then
 
         println "Configuring gnome..."
 
         sudo systemctl enable gdm.service
+    fi
+
+    if [[ "${de}" == "kde" ]]; then
+
+        println "Configuring kde..."
+
+        sudo systemctl enable sddm.service
     fi
 
     println "Enabling services (libvirtd, sshd and ufw)..."
