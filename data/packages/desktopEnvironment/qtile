@@ -1,4 +1,5 @@
 qtile
+picom
 slock
 dunst
 rofi
@@ -9,7 +10,7 @@ gtk-engine-murrine
 kvantum
 lxappearance
 arc-gtk-theme
-papirus-icon-theme
+cutefish-icons
 capitaine-cursors
 polkit
 gnome-keyring
@@ -25,9 +26,11 @@ alacritty
 ristretto
 pluma
 engrampa
+parcellite
 thunar
 gvfs
 thunar-archive-plugin
+thunar-media-tags-plugin
 ffmpegthumbnailer
 tumbler
-parcellite
+libgsf
