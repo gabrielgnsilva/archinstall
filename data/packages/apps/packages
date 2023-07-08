@@ -1,7 +1,6 @@
 man-pages
 man-db
 dosfstools
-pkgfile
 mtools
 dialog
 ufw
@@ -15,10 +14,6 @@ i2c-tools
 xdg-utils
 xdg-user-dirs
 python3
-python-pip
-python-psutil
-python-setuptools
-python-pycodestyle
 vim
 firefox
 geckodriver

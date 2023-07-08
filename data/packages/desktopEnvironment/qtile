@@ -20,7 +20,6 @@ seahorse
 network-manager-applet
 udisks2
 udiskie
-lm_sensors
 nitrogen
 alacritty
 ristretto
