@@ -728,6 +728,10 @@ function installPackages() {
 
     source "${scriptDir}"/scripts/nvm.sh
 
+    println "Intalling vscode..."
+
+    source "${scriptDir}"/scripts/vscode.sh
+
     if [[ "${de}" == "gnome" ]]; then
 
         println "Configuring gnome..."
