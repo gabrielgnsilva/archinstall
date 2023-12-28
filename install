@@ -724,13 +724,13 @@ function installPackages() {
 
     source "${scriptDir}"/scripts/fonts.sh
 
-    println "Intalling nvm..."
+    # println "Intalling nvm..."
 
-    source "${scriptDir}"/scripts/nvm.sh
+    # source "${scriptDir}"/scripts/nvm.sh
 
-    println "Intalling vscode..."
+    # println "Intalling vscode..."
 
-    source "${scriptDir}"/scripts/vscode.sh
+    # source "${scriptDir}"/scripts/vscode.sh
 
     if [[ "${de}" == "gnome" ]]; then
 
