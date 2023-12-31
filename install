@@ -483,24 +483,63 @@ function configPackageManager() {
 }
 
 function configBootloader() {
+    local yn
+    local promptInput
+    local bootLoader
 
     println "Configuring bootloader..."
 
+    promptInput="$(prompt "Choose bootloader: ") "
+    while true; do
+        println "\nOptions: [GRUB(1)] or [systemd-boot(2)]"
+        read -r -p "${promptInput}" yn
+        case "${yn,,}" in
+            "1" | "grub" )
+                bootLoader="grub"
+                break
+                ;;
+            "2" | "systemd-boot" )
+                bootLoader="systemd-boot"
+                break
+                ;;
+            * ) : ;;
+        esac
+    done
+
     println "Downloading packages..."
 
-    pacman --sync grub efibootmgr intel-ucode --noconfirm
+    if [[ "${bootLoader}" == "grub" ]]; then
+        pacman --sync grub efibootmgr intel-ucode --noconfirm
 
-    println "Installing grub..."
+        println "Installing grub..."
 
-    grub-install --target=x86_64-efi --efi-directory=/boot \
-           --bootloader-id=GRUB --recheck
+        grub-install --target=x86_64-efi --efi-directory=/boot \
+            --bootloader-id=GRUB --recheck
 
-    println "Configuring grub..."
+        println "Configuring grub..."
 
-    sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
-        --in-place /etc/default/grub
+        sed --expression 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=0/g' \
+            --in-place /etc/default/grub
 
-    grub-mkconfig -o /boot/grub/grub.cfg
+        grub-mkconfig -o /boot/grub/grub.cfg
+    fi
+
+    if [[ "${bootLoader}" == "systemd-boot" ]]; then
+        println "Installing systemd-boot..."
+        bootctl install
+
+        # println "Configuring systemd-boot..."
+
+        # {   printf "\n"
+        #     printf "\n"
+        #     printf "\n"
+        #     printf "\n"
+        # } | tee /boot/loader/loader.conf
+
+        println "Automatically update systemd-boot..."
+        systemctl enable systemd-boot-update.service
+    fi
+
 }
 
 function configSudo() {
@@ -518,7 +557,12 @@ function configFiles() {
 
     println "Moving config files..."
 
-    cp --recursive --verbose "${scriptDir}"/data/etc /
+    cp --recursive --verbose "${scriptDir}"/data/etc/pam.d /etc
+    cp --recursive --verbose "${scriptDir}"/data/etc/tmpfiles.d /etc
+
+    if [[ -f '/boot/grub/grub.conf' ]]; then
+        cp --recursive --verbose "${scriptDir}"/data/etc/X11 /etc
+    fi
 }
 
 function configDefaultHomeDirectories() {
