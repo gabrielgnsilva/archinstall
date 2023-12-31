@@ -199,7 +199,7 @@ mkinitcpio -p linux  # Or linux-lts
 
 #### Configuring the boot loader
 
-In order to unlock the encrypted root partition at boot, the following kernel parameter needs to be set on the boot loader `cryptdevice=UUID=DEVICE_UUID:lvm root=/dev/vg0/root`:
+In order to unlock the encrypted root partition at boot, the following kernel parameter needs to be set on the boot loader `cryptdevice=UUID=DEVICE_UUID:lvm`:
 
 ##### GRUB
 
@@ -211,7 +211,7 @@ $ blkid | grep "nvme0n1p2"
 # GRUB
 $ cat /etc/default/grub
 [...]
-GRUB_CMDLINE_LINUX="cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=/dev/vg0/root"
+GRUB_CMDLINE_LINUX="cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=LABEL=ROOT"
 [...]
 
 $ grub-mkconfig -o /boot/grub/grub.cfg
@@ -227,7 +227,7 @@ title   Arch Linux
 linux   /vmlinuz-linux
 initrd  /intel-ucode.img
 initrd  /initramfs-linux.img
-options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=/dev/vg0/root rw
+options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=LABEL=ROOT rw
 
 $ cat /boot/loader/entries/arch-fallback.conf
 
@@ -235,7 +235,7 @@ title   Arch Linux (fallback initramfs)
 linux   /vmlinuz-linux
 initrd  /intel-ucode.img
 initrd  /initramfs-linux-fallback.img
-options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=/dev/vg0/root rw
+options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=LABEL=ROOT rw
 ```
 
 ## Installation
