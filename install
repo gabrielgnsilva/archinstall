@@ -528,13 +528,29 @@ function configBootloader() {
         println "Installing systemd-boot..."
         bootctl install
 
-        # println "Configuring systemd-boot..."
+        println "Configuring systemd-boot..."
 
-        # {   printf "\n"
-        #     printf "\n"
-        #     printf "\n"
-        #     printf "\n"
-        # } | tee /boot/loader/loader.conf
+        {   printf "default      arch.conf\n"
+            printf "timeout      1\n"
+            printf "console-mode max\n"
+            printf "editor       no\n"
+        } | tee /boot/loader/loader.conf
+
+        println "Configuring systemd-boot entries..."
+
+        {   printf "title   Arch Linux\n"
+            printf "linux   /vmlinuz-linux\n"
+            printf "initrd  /intel-ucode.img\n"
+            printf "initrd  /initramfs-linux.img\n"
+            printf "options root="LABEL=ROOT" rw\n"
+        } | tee /boot/loader/entries/arch.conf
+
+        {   printf "title   Arch Linux (fallback initramfs)\n"
+            printf "linux   /vmlinuz-linux\n"
+            printf "initrd  /intel-ucode.img\n"
+            printf "initrd  /initramfs-linux-fallback.img\n"
+            printf "options root="LABEL=ROOT" rw\n"
+        } | tee /boot/loader/entries/arch-fallback.conf
 
         println "Automatically update systemd-boot..."
         systemctl enable systemd-boot-update.service
