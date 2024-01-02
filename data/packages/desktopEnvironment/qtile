@@ -1,3 +1,6 @@
+xorg
+xorg-apps
+xorg-xinit
 qtile
 picom
 slock
@@ -13,6 +16,7 @@ arc-gtk-theme
 cutefish-icons
 capitaine-cursors
 polkit
+lxsession
 gnome-keyring
 libsecret
 libgnome-keyring
