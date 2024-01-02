@@ -542,14 +542,14 @@ function configBootloader() {
             printf "linux   /vmlinuz-linux\n"
             printf "initrd  /intel-ucode.img\n"
             printf "initrd  /initramfs-linux.img\n"
-            printf "options root="LABEL=ROOT" rw\n"
+            printf 'options root="LABEL=ROOT" rw\n'
         } | tee /boot/loader/entries/arch.conf
 
         {   printf "title   Arch Linux (fallback initramfs)\n"
             printf "linux   /vmlinuz-linux\n"
             printf "initrd  /intel-ucode.img\n"
             printf "initrd  /initramfs-linux-fallback.img\n"
-            printf "options root="LABEL=ROOT" rw\n"
+            printf 'options root="LABEL=ROOT" rw\n'
         } | tee /boot/loader/entries/arch-fallback.conf
 
         println "Automatically update systemd-boot..."
@@ -855,7 +855,7 @@ function _main() {
                 ;;
             -f | --force)
                 force=true
-                ;;
+            ;;
             * )
                 println "${msgInvalid} \"${1:-}\""
                 println "${msgTryHelp}"
