@@ -716,18 +716,26 @@ function installPackages() {
 
     promptInput="$(prompt "Choose Desktop Environment/Window Manager: ")"
     while true; do
-        println "\nOptions: [Qtile(1)], [KDE Plasma(2)] or [Gnome(3)]"
+        println "\nOptions: [Hyprland (1)], [Qtile(2)], [KDE Plasma(3)] or [Gnome(4)]"
         read -r -p "${promptInput}" yn
         case "${yn,,}" in
-            "1" | "qtile" )
+            "1" | "hyprland" )
+                if [[ "${audioServer}" == "pulseaudio" && ! "${1}" == true ]]; then
+                    println "It's not recommended to use Hyperland with PulseAudio!\nUse '-f' or '--force' to ignore this warning."
+                    exit 1
+                fi
+                de="hyprland"
+                break
+                ;;
+            "2" | "qtile" )
                 de="qtile"
                 break
                 ;;
-            "2" | "kde" | "kde plasma" )
+            "3" | "kde" | "kde plasma" )
                 de="kde"
                 break
                 ;;
-            "3" | "gnome" )
+            "4" | "gnome" )
                 de="gnome"
                 break
                 ;;
@@ -737,7 +745,6 @@ function installPackages() {
 
     filePath=(
         "${scriptDir}/data/packages/drivers/gpu/amd"
-        "${scriptDir}/data/packages/displayServer/xorg"
         "${scriptDir}/data/packages/desktopEnvironment/${de}"
         "${scriptDir}/data/packages/audio/${audioServer}"
         "${scriptDir}/data/packages/apps/packages"
@@ -832,6 +839,7 @@ function _main() {
     done
 
     local setup
+    local force=''
 
     cd "${scriptDir}" || exit 1
     while [[ "${#}" -gt 0 ]]; do
@@ -844,6 +852,9 @@ function _main() {
                     exit 1
                 fi
                 setup="${1}"
+                ;;
+            -f | --force)
+                force=true
                 ;;
             * )
                 println "${msgInvalid} \"${1:-}\""
@@ -869,7 +880,7 @@ function _main() {
     fi
 
     if [[ "${setup}" =~ ^(p|packages)$ ]]; then
-        installPackages
+        installPackages "${force}"
     fi
 
     println "${scriptName}: script completed successfully"
