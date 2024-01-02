@@ -16,7 +16,7 @@ arc-gtk-theme
 cutefish-icons
 capitaine-cursors
 polkit
-lxsession
+polkit-gnome
 gnome-keyring
 libsecret
 libgnome-keyring

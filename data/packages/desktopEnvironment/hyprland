@@ -5,7 +5,7 @@ qt5ct
 qt6ct
 qt4ct
 polkit
-lxsession
+polkit-gnome
 gnome-keyring
 libsecret
 libgnome-keyring
