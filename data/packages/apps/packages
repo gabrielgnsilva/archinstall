@@ -1,5 +1,3 @@
-man-pages
-man-db
 dosfstools
 mtools
 dialog
@@ -17,8 +15,6 @@ python3
 vim
 firefox
 geckodriver
-piper
-flameshot
 qemu-desktop
 dnsmasq
 iptables-nft
