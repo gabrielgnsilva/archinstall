@@ -777,16 +777,6 @@ function installPackages() {
 
     println "Packages successfully installed... "
 
-    if [[ "${audioServer}" == "pipewire" ]]; then
-
-        println "Moving pipewire config files... "
-
-        cp --recursive --force "${scriptDir}"/data/home/config/pipewire \
-            "${XDG_CONFIG_HOME}"
-        cp --recursive --force "${scriptDir}"/data/home/config/wireplumber \
-            "${XDG_CONFIG_HOME}"
-    fi
-
     println "Intalling fonts..."
 
     source "${scriptDir}"/scripts/fonts.sh
