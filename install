@@ -400,8 +400,6 @@ function configNetwork() {
 
     println "Configuring network..."
 
-    println "Configuring hostname..."
-
     promptInput="$(prompt "Input the desired hostname: ")"
     while true; do
         read -r -p "${promptInput}" hostName
@@ -447,12 +445,11 @@ function configNetwork() {
         printf "%s\n" "${hostName}"
     } | tee /etc/hosts
 
-    println "Configuring network manager, dhcpcd and openssh..."
+    println "Configuring network manager, dhcpcd..."
 
     pacman --sync networkmanager dhcpcd openssh --noconfirm
     systemctl enable NetworkManager.service
     systemctl enable dhcpcd.service
-    systemctl enable sshd.service
 }
 
 function configPackageManager() {
