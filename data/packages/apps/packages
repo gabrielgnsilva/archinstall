@@ -12,7 +12,7 @@ i2c-tools
 xdg-utils
 xdg-user-dirs
 python3
-vim
+nvim
 firefox
 geckodriver
 qemu-desktop
@@ -30,7 +30,6 @@ audacity
 vlc
 gimp
 libreoffice
-kdenlive
 obs-studio
 shellcheck
 fontconfig
