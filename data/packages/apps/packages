@@ -12,7 +12,7 @@ i2c-tools
 xdg-utils
 xdg-user-dirs
 python3
-nvim
+neovim
 firefox
 geckodriver
 qemu-desktop
