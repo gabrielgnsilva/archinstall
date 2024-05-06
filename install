@@ -127,73 +127,73 @@
 #
 #=======================================================================
 # DEBUG OPTIONS
-    set +o xtrace
+set +o xtrace
 #       Trace the execution of the script (DEBUG)
 
-    set +o noexec
+set +o noexec
 #       Don't execute commands (Ignored by interactive shells)
 #
 #=======================================================================
 # BASH OPTIONS
-    set -o nounset  # Exposes unset variables
-    set -o errexit  # Exit upon error, avoiding cascading errors
-    set -o pipefail  # Unveils hidden failures
-    set -o noclobber  # Avoid overwriting files (eg: echo "hi" > foo)
-    set -o errtrace  # Inherit trap on ERR to functions and commands
-    shopt -s nullglob  # Non-matching globs are removed ('*.foo' => '')
-    shopt -s failglob  # Non-matching globs throw errors
-    shopt -u nocaseglob  # Case insensitive globs
-    shopt -s dotglob  # Wildcards match hidden files
-    shopt -s globstar  # Recursive matches ('a/**/*.e' => 'a/b/c/d.e')
+set -o nounset      # Exposes unset variables
+set -o errexit      # Exit upon error, avoiding cascading errors
+set -o pipefail     # Unveils hidden failures
+set -o noclobber    # Avoid overwriting files (eg: echo "hi" > foo)
+set -o errtrace     # Inherit trap on ERR to functions and commands
+shopt -s nullglob   # Non-matching globs are removed ('*.foo' => '')
+shopt -s failglob   # Non-matching globs throw errors
+shopt -u nocaseglob # Case insensitive globs
+shopt -s dotglob    # Wildcards match hidden files
+shopt -s globstar   # Recursive matches ('a/**/*.e' => 'a/b/c/d.e')
 #
 #=======================================================================
 # TRAPS
-    function _setTraps() {
+function _setTraps() {
 
-        trap '{ set +o xtrace; } 2>/dev/null                     \
+    trap '{ set +o xtrace; } 2>/dev/null                     \
             ; PS4="+ [$(date +"%d/%m/%Y %H:%M:%S")] ${LINENO}: " \
             ; set -o xtrace' DEBUG
 
-        trap "" SIGTSTP
-        trap _exitTrap EXIT
-        trap _ctrlC INT
-        trap _errTrapper ERR
-    }
+    trap "" SIGTSTP
+    trap _exitTrap EXIT
+    trap _ctrlC INT
+    trap _errTrapper ERR
+}
 
-    function _ctrlC() {
-        trap "" INT  # Disable trap on CTRL_C to prevent recursion
+function _ctrlC() {
+    trap "" INT # Disable trap on CTRL_C to prevent recursion
 
-        println "\nInterrupt signal intercepted! Exiting now..."
-        exit 130
-    }
+    println "\nInterrupt signal intercepted! Exiting now..."
+    exit 130
+}
 
-    function _errTrapper() {
+function _errTrapper() {
 
-        local exitCode="${?}"
+    local exitCode="${?}"
 
-        trap "" ERR  # Disable trap on ERR to prevent recursion
+    trap "" ERR # Disable trap on ERR to prevent recursion
 
-        println "${scriptName}: an exception occurred during execution"
-        println "Check the log file \"${scriptLogFile}\" for details."
+    println "${scriptName}: an exception occurred during execution"
+    println "Check the log file \"${scriptLogFile}\" for details."
 
-        exit "${exitCode:-1}"
-    }
+    exit "${exitCode:-1}"
+}
 
-    function _exitTrap() {
+function _exitTrap() {
 
-        local exitCode="${?}"
+    local exitCode="${?}"
 
-        trap '' EXIT  # Disable trap on EXIT to prevent recursion
+    trap '' EXIT # Disable trap on EXIT to prevent recursion
 
-        rm --recursive --force  \
-            "${scriptTempDir}"  \
-            "${scriptTempFile}"
+    rm --recursive --force \
+        "${scriptTempDir}" \
+        "${scriptTempFile}"
 
-        cd "${currentDir}"
+    cd "${currentDir}"
 
-        log "Script Terminated with exit status: ${exitCode:-1}"
-        exit "${exitCode:-1}"
-    }
+    log "Script Terminated with exit status: ${exitCode:-1}"
+    exit "${exitCode:-1}"
+}
 #
 #=======================================================================
 #: END_OF_HEADER
@@ -207,13 +207,14 @@ function _initVariables() {
 
     currentDir="${PWD}"
 
-    scriptParams=( "${@}" )
+    scriptParams=("${@}")
     scriptName="$(basename "${0}")"
-    scriptDir="$(cd "$(dirname "${0}")" && pwd )"
+    scriptDir="$(cd "$(dirname "${0}")" && pwd)"
     scriptPath="${scriptDir:?}/${scriptName:?}"
-    scriptHead=$(grep --no-messages --line-number "^#: END" "${0}" \
-        | head -1 \
-        | cut --fields=1 --delimiter=:
+    scriptHead=$(
+        grep --no-messages --line-number "^#: END" "${0}" \
+            | head -1 \
+            | cut --fields=1 --delimiter=:
     )
 
     scriptTempDir=$(mktemp --directory -t tmp.XXXXXXXXXX)
@@ -221,13 +222,14 @@ function _initVariables() {
 
     scriptLogFile="${scriptDir}"/logs/script.log
     mkdir --parents "$(dirname "${scriptLogFile}")" \
-        || { local exitCode="${?}"
-             printf "\nFailed to create log file on default directory: " >&2
-             printf "\"%s\"" "${scriptLogFile}" >&2
-             printf "\nMake sure it is a valid path and " >&2
-             printf "that you have write permission.\n" >&2
-             exit "${exitCode}"
-           }
+        || {
+            local exitCode="${?}"
+            printf "\nFailed to create log file on default directory: " >&2
+            printf "\"%s\"" "${scriptLogFile}" >&2
+            printf "\nMake sure it is a valid path and " >&2
+            printf "that you have write permission.\n" >&2
+            exit "${exitCode}"
+        }
 
     msgInvalid="${scriptName}: invalid option"
     msgTryHelp="Try '${scriptName} --help' for more information."
@@ -253,7 +255,7 @@ function _initLogger() {
 
     while [[ "${#}" -gt 0 ]]; do
         case "${1:-}" in
-            -l | --log-file )
+            -l | --log-file)
                 if [[ "${argUsed}" == true ]]; then
                     printf "%s: too much arguments\n" "${scriptName}" >&2
                     printf "%s\n" "${msgTryHelp}" >&2
@@ -268,14 +270,14 @@ function _initLogger() {
                     exit 1
                 fi
 
-                directory=$(dirname "${filePath}" 2>/dev/null)
+                directory=$(dirname "${filePath}" 2> /dev/null)
                 if [[ ! "${directory}" =~ ^/ ]]; then
                     directory="${PWD?}/${directory}"
                 fi
 
                 filename=$(basename "${filePath}")
-                if [[ ! "${directory}" =~ ^[a-zA-Z0-9_/\.-]+$          \
-                    || ! "${filename}" =~ ^[a-zA-Z0-9_/\.-]+$ ]]; then
+                if [[ ! "${directory}" =~ ^[a-zA-Z0-9_/\.-]+$ ||
+                    ! "${filename}" =~ ^[a-zA-Z0-9_/\.-]+$ ]]; then
 
                     printf "%s: invalid file or directory name\n" \
                         "${scriptName}" >&2
@@ -301,22 +303,22 @@ function _initLogger() {
                     dir="${parentDir}"
                 done
 
-                mkdir "${directory}" --parents            \
-                    && touch "${directory:?}/${filename}" \
+                mkdir "${directory}" --parents \
+                    && touch "${directory:?}/${filename}"
 
                 scriptLogFile="${filePath}"
                 argUsed=true
 
-                valuesToRemove=( "-l" "--log-file" "${filePath}" )
+                valuesToRemove=("-l" "--log-file" "${filePath}")
                 for element in "${scriptParams[@]}"; do
                     # Check if the element is in the list of values to remove
                     if [[ ! "${valuesToRemove[*]}" == *"${element}"* ]]; then
                         filteredParams+=("${element}")
                     fi
                 done
-                scriptParams=( "${filteredParams[@]}" )
+                scriptParams=("${filteredParams[@]}")
                 ;;
-            * )
+            *)
                 :
                 ;;
         esac
@@ -324,7 +326,7 @@ function _initLogger() {
     done
 
     cp /dev/null "${scriptLogFile}"
-    exec 3>&1 1>>"${scriptLogFile}" 2>&1
+    exec 3>&1 1>> "${scriptLogFile}" 2>&1
 }
 
 function _traceVariables() {
@@ -364,7 +366,7 @@ function configTimezone() {
 
     println "Configuring time zone and hwclock..."
 
-    ln --symbolic --force --verbose           \
+    ln --symbolic --force --verbose \
         /usr/share/zoneinfo/America/Sao_Paulo \
         /etc/timezone
     hwclock --systohc --verbose
@@ -406,11 +408,11 @@ function configNetwork() {
         promptConfirm="$(prompt "Confirm \"${hostName}\" ? [Y/n] ")"
         read -r -p "${promptConfirm}" yn
         case "${yn}" in
-            "y" | "yes" )
+            "y" | "yes")
                 printf "%s\n" "${hostName}" | tee /etc/hostname
                 break
                 ;;
-            * ) : ;;
+            *) : ;;
         esac
     done
 
@@ -422,21 +424,23 @@ function configNetwork() {
         promptConfirm="$(prompt "Confirm \"${prettyName}\" ? [Y/n] ")"
         read -r -p "${promptConfirm}" yn
         case "${yn}" in
-            "y" | "yes" )
-                {   printf "PRETTY_HOSTNAME=\"%s\"\n" "${prettyName}"
+            "y" | "yes")
+                {
+                    printf "PRETTY_HOSTNAME=\"%s\"\n" "${prettyName}"
                     printf "ICON_NAME=computer\n"
                     printf "CHASSIS=desktop\n"
                     printf "DEPLOYMENT=production\n"
                 } | tee /etc/machine-info
                 break
                 ;;
-            * ) : ;;
+            *) : ;;
         esac
     done
 
     println "Configuring hosts..."
 
-    {   printf "# Static table lookup for hostnames.\n"
+    {
+        printf "# Static table lookup for hostnames.\n"
         printf "# See hosts(5) for details\n"
         printf "\n"
         printf "127.0.0.1   localhost\n"
@@ -458,15 +462,16 @@ function configPackageManager() {
 
     println "Configuring package manager..."
 
-    lineNo=$(grep --line-number "\[multilib\]" /etc/pacman.conf \
-        | head -1                                               \
-        | cut --fields=1 --delimiter=:
+    lineNo=$(
+        grep --line-number "\[multilib\]" /etc/pacman.conf \
+            | head -1 \
+            | cut --fields=1 --delimiter=:
     )
 
     sed --expression 's/#ParallelDownloads = 5/ParallelDownloads = 5/g' \
-        --expression 's/#Color/Color/g'                                 \
-        --expression 's/#\[multilib\]/\[multilib\]/g'                   \
-        --expression "$(( lineNo + 1 ))s/^#//g"                         \
+        --expression 's/#Color/Color/g' \
+        --expression 's/#\[multilib\]/\[multilib\]/g' \
+        --expression "$((lineNo + 1))s/^#//g" \
         --in-place=.bak /etc/pacman.conf
 
     println "Population keyring..."
@@ -491,15 +496,15 @@ function configBootloader() {
         println "\nOptions: [GRUB(1)] or [systemd-boot(2)]"
         read -r -p "${promptInput}" yn
         case "${yn,,}" in
-            "1" | "grub" )
+            "1" | "grub")
                 bootLoader="grub"
                 break
                 ;;
-            "2" | "systemd-boot" )
+            "2" | "systemd-boot")
                 bootLoader="systemd-boot"
                 break
                 ;;
-            * ) : ;;
+            *) : ;;
         esac
     done
 
@@ -523,11 +528,13 @@ function configBootloader() {
 
     if [[ "${bootLoader}" == "systemd-boot" ]]; then
         println "Installing systemd-boot..."
+        pacman --sync intel-ucode --noconfirm
         bootctl install
 
         println "Configuring systemd-boot..."
 
-        {   printf "default      arch.conf\n"
+        {
+            printf "default      arch.conf\n"
             printf "timeout      1\n"
             printf "console-mode max\n"
             printf "editor       no\n"
@@ -535,14 +542,16 @@ function configBootloader() {
 
         println "Configuring systemd-boot entries..."
 
-        {   printf "title   Arch Linux\n"
+        {
+            printf "title   Arch Linux\n"
             printf "linux   /vmlinuz-linux\n"
             printf "initrd  /intel-ucode.img\n"
             printf "initrd  /initramfs-linux.img\n"
             printf 'options root="LABEL=ROOT" rw\n'
         } | tee /boot/loader/entries/arch.conf
 
-        {   printf "title   Arch Linux (fallback initramfs)\n"
+        {
+            printf "title   Arch Linux (fallback initramfs)\n"
             printf "linux   /vmlinuz-linux\n"
             printf "initrd  /intel-ucode.img\n"
             printf "initrd  /initramfs-linux-fallback.img\n"
@@ -559,7 +568,8 @@ function configSudo() {
 
     println "Configuring sudo..."
 
-    {   printf "%%wheel     ALL=(ALL:ALL) ALL\n"
+    {
+        printf "%%wheel     ALL=(ALL:ALL) ALL\n"
         printf "\n"
         printf "Defaults lecture = always\n"
         printf "Defaults insults\n"
@@ -616,12 +626,13 @@ function configXdgBaseDirectory() {
         promptConfirm="$(prompt "Confirm \"${defEditor}\"? [Y/n] ")"
         read -r -p "${promptConfirm}" yn
         case "${yn}" in
-            "y" | "yes" ) break ;;
-            *           ) :     ;;
+            "y" | "yes") break ;;
+            *) : ;;
         esac
     done
 
-    {   printf "\n"
+    {
+        printf "\n"
         printf "# Default Editor\n"
         printf "EDITOR=%s\n" "${defEditor}"
         printf "\n"
@@ -648,8 +659,8 @@ function configUser() {
         promptConfirm="$(prompt "Confirm \"${userLogin}\"? [Y/n] ")"
         read -r -p "${promptConfirm}" yn
         case "${yn}" in
-            "y" | "yes" ) break ;;
-            *           ) :     ;;
+            "y" | "yes") break ;;
+            *) : ;;
         esac
     done
 
@@ -659,16 +670,16 @@ function configUser() {
         promptConfirm="$(prompt "Confirm \"${userFullName}\"? [Y/n] ")"
         read -r -p "${promptConfirm}" yn
         case "${yn}" in
-            "y" | "yes" ) break ;;
-            *           ) :     ;;
+            "y" | "yes") break ;;
+            *) : ;;
         esac
     done
 
     useradd --comment "${userFullName}" \
-            --create-home               \
-            --groups wheel              \
-            --shell /bin/bash           \
-            "${userLogin}"
+        --create-home \
+        --groups wheel \
+        --shell /bin/bash \
+        "${userLogin}"
 
     until passwd 2>&3 "${userLogin}"; do
         println "Passwords do not match, try again..."
@@ -699,15 +710,15 @@ function installPackages() {
         println "\nOptions: [PipeWire(1)] or [PulseAudio(2)]"
         read -r -p "${promptInput}" yn
         case "${yn,,}" in
-            "1" | "pipewire" )
+            "1" | "pipewire")
                 audioServer="pipewire"
                 break
                 ;;
-            "2" | "pulseaudio" )
+            "2" | "pulseaudio")
                 audioServer="pulseaudio"
                 break
                 ;;
-            * ) : ;;
+            *) : ;;
         esac
     done
 
@@ -716,7 +727,7 @@ function installPackages() {
         println "\nOptions: [Hyprland (1)], [Qtile(2)], [KDE Plasma(3)] or [Gnome(4)]"
         read -r -p "${promptInput}" yn
         case "${yn,,}" in
-            "1" | "hyprland" )
+            "1" | "hyprland")
                 if [[ "${audioServer}" == "pulseaudio" && ! "${1}" == true ]]; then
                     println "It's not recommended to use Hyperland with PulseAudio!\nUse '-f' or '--force' to ignore this warning."
                     exit 1
@@ -724,19 +735,19 @@ function installPackages() {
                 de="hyprland"
                 break
                 ;;
-            "2" | "qtile" )
+            "2" | "qtile")
                 de="qtile"
                 break
                 ;;
-            "3" | "kde" | "kde plasma" )
+            "3" | "kde" | "kde plasma")
                 de="kde"
                 break
                 ;;
-            "4" | "gnome" )
+            "4" | "gnome")
                 de="gnome"
                 break
                 ;;
-            * ) : ;;
+            *) : ;;
         esac
     done
 
@@ -758,11 +769,11 @@ function installPackages() {
         doCountdown 5 >&3
         while IFS="" read -r p <&4 || [[ -n "${p}" ]]; do
             while true; do
-                sudo pacman --sync "${p}" --noconfirm   \
+                sudo pacman --sync "${p}" --noconfirm \
                     --disable-download-timeout >&3 2>&3 \
-                || sudo pacman --sync "${p}"            \
-                    --disable-download-timeout >&3 2>&3 \
-                || :
+                    || sudo pacman --sync "${p}" \
+                        --disable-download-timeout >&3 2>&3 \
+                    || :
 
                 if sudo pacman -Q "${p}" || sudo pacman -Qg "${p}"; then
                     break
@@ -794,12 +805,11 @@ function installPackages() {
 
     println "Enabling services (libvirtd, sshd and ufw)..."
 
-    sudo systemctl enable libvirtd.service  # Enable Libvirtd ("Virtualization")
-    sudo systemctl enable sshd.service      # Enable openssh Service
-    sudo systemctl enable ufw.service       # Enable firewall Service
-    sudo ufw enable                         # Enable firewall
+    sudo systemctl enable libvirtd.service # Enable Libvirtd ("Virtualization")
+    sudo systemctl enable sshd.service     # Enable openssh Service
+    sudo systemctl enable ufw.service      # Enable firewall Service
+    sudo ufw enable                        # Enable firewall
 }
-
 
 # Section: Main Program
 
@@ -813,15 +823,15 @@ function _main() {
     local i
     for i in "${@}"; do
         case "${i}" in
-            -h | --help | help )
+            -h | --help | help)
                 displayFullHelp >&3
                 exit 0
                 ;;
-            -v | --version | version )
+            -v | --version | version)
                 displayVersion >&3
                 exit 0
                 ;;
-                * ) : ;;
+            *) : ;;
         esac
     done
 
@@ -831,7 +841,7 @@ function _main() {
     cd "${scriptDir}" || exit 1
     while [[ "${#}" -gt 0 ]]; do
         case "${1:-}" in
-            -s | --setup )
+            -s | --setup)
                 shift
                 if [[ ! "${1:-}" =~ ^(a|arch|p|packages)$ ]]; then
                     println "${msgInvalid} \"${1:-}\""
@@ -842,8 +852,8 @@ function _main() {
                 ;;
             -f | --force)
                 force=true
-            ;;
-            * )
+                ;;
+            *)
                 println "${msgInvalid} \"${1:-}\""
                 println "${msgTryHelp}"
                 exit 1
