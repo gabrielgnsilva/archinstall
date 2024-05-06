@@ -13,6 +13,11 @@ xdg-utils
 xdg-user-dirs
 python3
 neovim
+npm
+ripgrep
+fzf
+gcc
+make
 firefox
 geckodriver
 qemu-desktop
@@ -35,3 +40,4 @@ shellcheck
 fontconfig
 lib32-fontconfig
 noto-fonts-emoji
+otf-ipafont
