@@ -9,14 +9,11 @@ gnome-keyring
 libsecret
 libgnome-keyring
 seahorse
-hyprpaper
-waybar
 dunst
 rofi
 rofi-emoji
 wl-clipboard
 wtype
-network-manager-applet
 udisks2
 udiskie
 alacritty
