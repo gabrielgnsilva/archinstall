@@ -1,28 +1,30 @@
+<!-- @format -->
+
 # Arch Install
 
 The content of this document and accompanying script is a personal guide developed for installing Arch Linux. While it is recommended to refer to the [Official Installation Guide](https://wiki.archlinux.org/title/Installation_guide), you are free to utilize any information provided here in a manner that suits your needs.
 
-- [Arch Install](#arch-install)
-  - [Pre-Installation](#pre-installation)
-    - [Notes](#notes)
-    - [Keyboard Layout (Optional)](#keyboard-layout-optional)
-    - [Update the system clock](#update-the-system-clock)
-    - [Partitions (Encrypted with LVM on LUKS)](#partitions-encrypted-with-lvm-on-luks)
-      - [Erase all data on disk (Optional)](#erase-all-data-on-disk-optional)
-      - [Preparing the disk](#preparing-the-disk)
-      - [Preparing the logical volumes](#preparing-the-logical-volumes)
-      - [Preparing the boot partition](#preparing-the-boot-partition)
-      - [Continue the installation](#continue-the-installation)
-      - [Configuring mkinitcpio](#configuring-mkinitcpio)
-      - [Configuring the boot loader](#configuring-the-boot-loader)
-        - [GRUB](#grub)
-        - [Systemd-boot](#systemd-boot)
-  - [Installation](#installation)
-    - [Select The Mirrors](#select-the-mirrors)
-    - [Install Essential Packages](#install-essential-packages)
-    - [Generate fstab](#generate-fstab)
-    - [Chroot](#chroot)
-    - [Scripted Installation](#scripted-installation)
+-   [Arch Install](#arch-install)
+    -   [Pre-Installation](#pre-installation)
+        -   [Notes](#notes)
+        -   [Keyboard Layout (Optional)](#keyboard-layout-optional)
+        -   [Update the system clock](#update-the-system-clock)
+        -   [Partitions (Encrypted with LVM on LUKS)](#partitions-encrypted-with-lvm-on-luks)
+            -   [Erase all data on disk (Optional)](#erase-all-data-on-disk-optional)
+            -   [Preparing the disk](#preparing-the-disk)
+            -   [Preparing the logical volumes](#preparing-the-logical-volumes)
+            -   [Preparing the boot partition](#preparing-the-boot-partition)
+            -   [Continue the installation](#continue-the-installation)
+            -   [Configuring mkinitcpio](#configuring-mkinitcpio)
+            -   [Configuring the boot loader](#configuring-the-boot-loader)
+                -   [GRUB](#grub)
+                -   [Systemd-boot](#systemd-boot)
+    -   [Installation](#installation)
+        -   [Select The Mirrors](#select-the-mirrors)
+        -   [Install Essential Packages](#install-essential-packages)
+        -   [Generate fstab](#generate-fstab)
+        -   [Chroot](#chroot)
+        -   [Scripted Installation](#scripted-installation)
 
 ## Pre-Installation
 
@@ -32,14 +34,15 @@ Before proceeding with the installation of Arch Linux, it is important to follow
 
 The Arch Linux installation images do not include built-in support for Secure Boot. However, you can manually set up Secure Boot after completing the installation if desired.
 
-### Keyboard Layout (Optional)
+### Keyboard Layout and Console Font (Optional)
 
-To configure the keyboard layout, (e.g., us-acentos), use the following command:
+To configure the console keyboard layout and font, (e.g., us-acentos and ter-132b), use the following commands:
 
 ```bash
 #!/bin/bash
 
-loadkeys us-acentos
+loadkeys us-acentos # to list keymaps use: `localectl list-keymaps`
+setfont ter-132b # Console fonts are located in: `/usr/share/kbd/consolefonts/`
 ```
 
 ### Update the system clock
@@ -242,6 +245,19 @@ options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=LABEL=ROO
 
 The following section provides guidance on installing Arch Linux. It covers the necessary steps and instructions to successfully install the operating system on your system.
 
+### Connect to the internet
+
+To set up a network connection in the live environment, go through the following steps:
+
+#### Wireless
+
+-   (Wireless/WWAN): Make sure the card is not blocked with [rfkill](https://wiki.archlinux.org/title/Network_configuration/Wireless#Rfkill_caveat).
+-   Authenticate to the wireless network using [iwctl](https://wiki.archlinux.org/title/Iwd#iwctl).
+
+#### Ethernet
+
+-   Plug in the cable.
+
 ### Select The Mirrors
 
 Use `reflector` to automatically update `/etc/pacman.d/mirrorlist`:
@@ -259,7 +275,7 @@ Use pacstrap to install the base package, Linux kernel, firmware for common hard
 ```bash
 #!/bin/bash
 
-pacstrap -K /mnt base base-devel linux linux-firmware linux-firmware-qlogic sof-firmware vim git dhcpcd openssh lvm2
+pacstrap -K /mnt base base-devel linux linux-firmware linux-firmware-qlogic linux-firmware-marvell sof-firmware vim git dhcpcd openssh lvm2
 ```
 
 ### Generate fstab

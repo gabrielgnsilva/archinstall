@@ -1,6 +1,7 @@
 hyprland
 qt5-wayland
 qt6-wayland
+xdg-desktop-portal-hyprland
 qt5ct
 qt6ct
 polkit

@@ -449,9 +449,9 @@ function configNetwork() {
         printf "%s\n" "${hostName}"
     } | tee /etc/hosts
 
-    println "Configuring network manager, dhcpcd..."
+    println "Configuring network, dhcpcd, openssh..."
 
-    pacman --sync networkmanager dhcpcd openssh --noconfirm
+    pacman --sync networkmanager dhcpcd openssh wpa_supplicant --noconfirm
     systemctl enable NetworkManager.service
     systemctl enable dhcpcd.service
 }
@@ -582,6 +582,8 @@ function configFiles() {
 
     cp --recursive --verbose "${scriptDir}"/data/etc/pam.d /etc
     cp --recursive --verbose "${scriptDir}"/data/etc/tmpfiles.d /etc
+    cp --recursive --verbose "${scriptDir}"/data/etc/systemd /etc
+    cp --recursive --verbose "${scriptDir}"/data/etc/modules-load.d /etc
 
     if [[ -f '/boot/grub/grub.conf' ]]; then
         cp --recursive --verbose "${scriptDir}"/data/etc/X11 /etc
@@ -752,10 +754,12 @@ function installPackages() {
     done
 
     filePath=(
+        "${scriptDir}/data/packages/drivers/cpu/intel"
         "${scriptDir}/data/packages/drivers/gpu/amd"
         "${scriptDir}/data/packages/desktopEnvironment/${de}"
         "${scriptDir}/data/packages/audio/${audioServer}"
-        "${scriptDir}/data/packages/apps/packages"
+        "${scriptDir}/data/packages/apps/applications"
+        "${scriptDir}/data/packages/apps/fonts"
     )
 
     for file in "${filePath[@]}"; do
