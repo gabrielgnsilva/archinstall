@@ -347,12 +347,10 @@ function _traceVariables() {
 # Section: Script Helper Functions
 
 function log() {
-
     command printf "+++ (%s): %b\n" "${BASH_LINENO[0]}" "${*}"
 }
 
 function println() {
-
     command printf "%b\n" "${*}" >&3
 }
 
@@ -581,6 +579,7 @@ function configFiles() {
     println "Moving config files..."
 
     cp --recursive --verbose "${scriptDir}"/data/etc/pam.d /etc
+    cp --recursive --verbose "${scriptDir}"/data/etc/pulse /etc
     cp --recursive --verbose "${scriptDir}"/data/etc/tmpfiles.d /etc
     cp --recursive --verbose "${scriptDir}"/data/etc/systemd /etc
     cp --recursive --verbose "${scriptDir}"/data/etc/modules-load.d /etc
@@ -591,9 +590,13 @@ function configFiles() {
 }
 
 function configDefaultHomeDirectories() {
-
     println "Configuring default home directories..."
-
+    mkdir --verbose /etc/skel/.config
+    mkdir --verbose /etc/skel/.local
+    mkdir --verbose /etc/skel/.local/bin
+    mkdir --verbose /etc/skel/.local/share/fonts
+    mkdir --verbose /etc/skel/.local/share/icons
+    mkdir --verbose /etc/skel/.local/share/themes
     mkdir --verbose /etc/skel/Desktop
     mkdir --verbose /etc/skel/Documents
     mkdir --verbose /etc/skel/Downloads
@@ -609,12 +612,10 @@ function configDefaultHomeDirectories() {
     mkdir --verbose /etc/skel/Virtual\ Machines
     mkdir --verbose /etc/skel/Virtual\ Machines/Disks
     mkdir --verbose /etc/skel/Virtual\ Machines/Images
-    mkdir --verbose /etc/skel/.config
-    mkdir --verbose /etc/skel/.local
-    mkdir --verbose /etc/skel/.local/bin
+    mkdir --verbose /etc/skel/Work
 }
 
-function configXdgBaseDirectory() {
+function configXDGBaseDirectory() {
 
     local defEditor
     local promptInput
@@ -792,6 +793,7 @@ function installPackages() {
     println "Intalling fonts..."
 
     source "${scriptDir}"/scripts/fonts.sh
+    source "${scriptDir}"/scripts/tpm.sh
 
     if [[ "${de}" == "gnome" ]]; then
 
@@ -876,7 +878,7 @@ function _main() {
         configSudo
         configFiles
         configDefaultHomeDirectories
-        configXdgBaseDirectory
+        configXDGBaseDirectory
         configUser
     fi
 

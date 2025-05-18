@@ -14,6 +14,7 @@ dunst
 rofi
 rofi-emoji
 wl-clipboard
+cliphist
 wtype
 udisks2
 udiskie
@@ -22,6 +23,7 @@ ristretto
 pluma
 slurp
 grim
+swappy
 engrampa
 thunar
 gvfs
@@ -30,10 +32,6 @@ thunar-media-tags-plugin
 ffmpegthumbnailer
 tumbler
 libgsf
-gtk-engine-murrine
-kvantum
-lxappearance
-arc-gtk-theme
 papirus-icon-theme
 capitaine-cursors
 slock
