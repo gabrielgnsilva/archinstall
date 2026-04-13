@@ -1,26 +1,29 @@
+<!-- @format -->
+
 # Arch Install
 
-The content of this document and accompanying script is a personal guide developed for installing Arch Linux. While it is recommended to refer to the [Official Installation Guide](https://wiki.archlinux.org/title/Installation_guide), you are free to utilize any information provided here in a manner that suits your needs.
+The content of this document is a personal guide developed for installing Arch Linux. While it is recommended to refer to the [Official Installation Guide](https://wiki.archlinux.org/title/Installation_guide), you are free to utilize any information provided here in a manner that suits your needs.
 
 - [Arch Install](#arch-install)
   - [Pre-Installation](#pre-installation)
     - [Notes](#notes)
-    - [Keyboard Layout (Optional)](#keyboard-layout-optional)
+    - [Keyboard Layout (Optional)](#keyboard-layout-and-console-font-optional)
     - [Update the system clock](#update-the-system-clock)
     - [Partitions (Encrypted with LVM on LUKS)](#partitions-encrypted-with-lvm-on-luks)
       - [Erase all data on disk (Optional)](#erase-all-data-on-disk-optional)
       - [Preparing the disk](#preparing-the-disk)
       - [Preparing the logical volumes](#preparing-the-logical-volumes)
       - [Preparing the boot partition](#preparing-the-boot-partition)
-      - [Continue the installation](#continue-the-installation)
-      - [Configuring mkinitcpio](#configuring-mkinitcpio)
-      - [Configuring the boot loader](#configuring-the-boot-loader)
   - [Installation](#installation)
     - [Select The Mirrors](#select-the-mirrors)
     - [Install Essential Packages](#install-essential-packages)
     - [Generate fstab](#generate-fstab)
     - [Chroot](#chroot)
-    - [Scripted Installation](#scripted-installation)
+    - [Configuring mkinitcpio](#configuring-mkinitcpio)
+    - [Configuring the bootloader](#configuring-the-bootloader)
+      - [GRUB](#grub)
+      - [Systemd-boot](#systemd-boot)
+  - [Post-Installation](#post-installation)
 
 ## Pre-Installation
 
@@ -30,14 +33,15 @@ Before proceeding with the installation of Arch Linux, it is important to follow
 
 The Arch Linux installation images do not include built-in support for Secure Boot. However, you can manually set up Secure Boot after completing the installation if desired.
 
-### Keyboard Layout (Optional)
+### Keyboard Layout and Console Font (Optional)
 
-To configure the keyboard layout, (e.g., us-acentos), use the following command:
+To configure the console keyboard layout and font, (e.g., us-acentos and ter-132b), use the following commands:
 
 ```bash
 #!/bin/bash
 
-loadkeys us-acentos
+loadkeys us-acentos # to list keymaps use: `localectl list-keymaps`
+setfont ter-132b # Console fonts are located in: `/usr/share/kbd/consolefonts/`
 ```
 
 ### Update the system clock
@@ -87,7 +91,7 @@ Use `fdisk` or to modify partition tables. Create a partition to be mounted at `
 ```bash
 #!/bin/bash
 
-fdisk /dev/nvme0n1
+fdisk /dev/sda
 ```
 
 Create the LUKS encrypted container at the designated partition. Enter the chosen password twice.
@@ -95,7 +99,7 @@ Create the LUKS encrypted container at the designated partition. Enter the chose
 ```bash
 #!/bin/bash
 
-cryptsetup luksFormat /dev/nvme0n1p2
+cryptsetup luksFormat /dev/sda2
 ```
 
 Open the container and the decrypted container will be available at `/dev/mapper/lvm`:
@@ -103,7 +107,7 @@ Open the container and the decrypted container will be available at `/dev/mapper
 ```bash
 #!/bin/bash
 
-cryptsetup open /dev/nvme0n1p2 lvm
+cryptsetup open /dev/sda2 lvm
 ```
 
 #### Preparing the logical volumes
@@ -165,60 +169,26 @@ Create a file system on the partition intended for /boot and mount the partition
 ```bash
 #!/bin/bash
 
-mkfs.fat -n BOOT-EFI -F 32 /dev/nvme0n1p1
-mount --mkdir /dev/nvme0n1p1 /mnt/boot
-```
-
-#### Continue the installation
-
-At this point resume the common [Installation steps](#installation) and return to the [next section](#configuring-mkinitcpio) to customize the Initramfs and Boot loader steps.
-
-#### Configuring mkinitcpio
-
-Make sure the `lvm2` package is installed and add the `keyboard`, `encrypt` and `lvm2` hooks to mkinitcpio.conf.
-
-```bash
-#!/bin/bash
-
-EDITOR /etc/mkinitcpio.conf
-```
-
-```markdown
-HOOKS=(base `udev` autodetect modconf kms `keyboard` `keymap` `consolefont` block `encrypt` `lvm2` filesystems fsck)
-```
-
-Regenerate the initramfs after saving the changes.
-
-```bash
-#!/bin/bash
-
-mkinitcpio -p linux  # Or linux-lts
-```
-
-#### Configuring the boot loader
-
-In order to unlock the encrypted root partition at boot, the following kernel parameter needs to be set by the boot loader `cryptdevice=UUID=DEVICE_UUID:lvm root=/dev/vg0/root`:
-
-```bash
-#!/bin/bash
-$ blkid | grep "nvme0n1p2"
-/dev/nvme0n1p1: LABEL="ROOT" UUID="e8bdb9ea-134f-47aa-9c4f-459a4a60acaa"...
-
-$ EDITOR /etc/default/grub
-GRUB_CMDLINE_LINUX="cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=/dev/vg0/root"
-```
-
-run `grub-mkconfig -o /boot/grub/grub.cfg` afterwards.
-
-```bash
-#!/bin/bash
-
-grub-mkconfig -o /boot/grub/grub.cfg
+mkfs.fat -n BOOT-EFI -F 32 /dev/sda1
+mount --mkdir /dev/sda1 /mnt/boot
 ```
 
 ## Installation
 
 The following section provides guidance on installing Arch Linux. It covers the necessary steps and instructions to successfully install the operating system on your system.
+
+### Connect to the internet
+
+To set up a network connection in the live environment, go through the following steps:
+
+#### Wireless
+
+- (Wireless/WWAN): Make sure the card is not blocked with [rfkill](https://wiki.archlinux.org/title/Network_configuration/Wireless#Rfkill_caveat).
+- Authenticate to the wireless network using [iwctl](https://wiki.archlinux.org/title/Iwd#iwctl).
+
+#### Ethernet
+
+- Plug in the cable... Duh..
 
 ### Select The Mirrors
 
@@ -237,7 +207,7 @@ Use pacstrap to install the base package, Linux kernel, firmware for common hard
 ```bash
 #!/bin/bash
 
-pacstrap -K /mnt base base-devel linux linux-firmware linux-firmware-qlogic sof-firmware vim git dhcpcd openssh lvm2
+pacstrap -K /mnt base base-devel linux linux-firmware linux-firmware-qlogic linux-firmware-marvell sof-firmware vim git dhcpcd openssh lvm2
 ```
 
 ### Generate fstab
@@ -260,6 +230,79 @@ Change root into the new system:
 arch-chroot /mnt
 ```
 
-### Scripted Installation
+### Configuring mkinitcpio
 
-Use the file `./install` to automatically configure Arch Linux, or follow the [Official Installation Guide#Configure the system](https://wiki.archlinux.org/title/Installation_guide#Configure_the_system).
+Make sure the `lvm2` package is installed and add the `keyboard`, `encrypt` and `lvm2` hooks to `mkinitcpio.conf`.
+
+```bash
+#!/bin/bash
+
+EDITOR /etc/mkinitcpio.conf
+```
+
+```markdown
+HOOKS=(base `udev` autodetect modconf kms `keyboard` `keymap` `consolefont` block `encrypt` `lvm2` filesystems fsck)
+```
+
+Regenerate `initramfs` after saving the changes.
+
+```bash
+#!/bin/bash
+
+mkinitcpio -p linux  # Or linux-lts
+```
+
+### Configuring the bootloader
+
+In order to unlock the encrypted root partition at boot, the following kernel parameter needs to be set on the bootloader `cryptdevice=UUID=DEVICE_UUID:lvm`:
+
+PS: If you'll be using [BLAST](https://github.com/gabrielgnsilva/blast), skip to [Post-Installation](#post-installation) setup.
+
+#### GRUB
+
+```bash
+#!/bin/bash
+$ blkid | grep "sda2"
+/dev/sda2: LABEL="ROOT" UUID="e8bdb9ea-134f-47aa-9c4f-459a4a60acaa"...
+
+# GRUB
+$ cat /etc/default/grub
+[...]
+GRUB_CMDLINE_LINUX="cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=LABEL=ROOT"
+[...]
+
+$ grub-mkconfig -o /boot/grub/grub.cfg
+```
+
+#### Systemd-boot
+
+Install it:
+
+```bash
+bootctl install
+mkinitcpio -p linux
+systemctl enable systemd-boot-update.service
+```
+
+```bash
+#!/bin/bash
+$ cat /boot/loader/entries/arch.conf
+
+title   Arch Linux
+linux   /vmlinuz-linux
+initrd  /intel-ucode.img
+initrd  /initramfs-linux.img
+options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=LABEL=ROOT rw
+
+$ cat /boot/loader/entries/arch-fallback.conf
+
+title   Arch Linux (fallback initramfs)
+linux   /vmlinuz-linux
+initrd  /intel-ucode.img
+initrd  /initramfs-linux-fallback.img
+options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=LABEL=ROOT rw
+```
+
+## Post-Installation
+
+Use [BLAST](https://github.com/gabrielgnsilva/blast) to automatically configure Arch with my [dotfiles](https://github.com/gabrielgnsilva/dotfiles), [Niri](https://niri-wm.github.io/niri/), packages, and system settings. Or follow the [Official Installation Guide#Configure the system](https://wiki.archlinux.org/title/Installation_guide#Configure_the_system).
