@@ -86,7 +86,7 @@ cryptsetup close to_be_wiped
 
 #### Preparing the disk
 
-Use `fdisk` or to modify partition tables. Create a partition to be mounted at `/boot` with a size of 512 MiB or more and another partition (Linux LVM) which will later contain the encrypted container.
+Use `fdisk` to modify the partition table. Create an EFI System Partition (ESP) to be mounted at `/boot` with a size of 512 MiB or more, and another partition that will contain the LUKS container.
 
 ```bash
 #!/bin/bash
@@ -197,17 +197,37 @@ Use `reflector` to automatically update `/etc/pacman.d/mirrorlist`:
 ```bash
 #!/bin/bash
 
-reflector --country COUNTRY,
+reflector --country "Brazil" --protocol https --sort rate --save /etc/pacman.d/mirrorlist
 ```
 
 ### Install Essential Packages
 
-Use pacstrap to install the base package, Linux kernel, firmware for common hardware and other packages. If you encrypted your device or partition, make sure to also install `lvm2`:
+Use pacstrap to install the base package, Linux kernel, firmware for common hardware and other packages. If you encrypted your device or partition, make sure to also install `cryptsetup` and `lvm2`
 
 ```bash
 #!/bin/bash
 
-pacstrap -K /mnt base base-devel linux linux-firmware linux-firmware-qlogic linux-firmware-marvell sof-firmware vim git dhcpcd openssh lvm2
+pacstrap -K /mnt base base-devel linux linux-firmware linux-firmware-qlogic linux-firmware-marvell sof-firmware vim git dhcpcd openssh cryptsetup lvm2
+```
+
+Install the CPU microcode package that matches your processor:
+
+PS: **you can skip this step if you'll be using [BLAST](https://github.com/gabrielgnsilva/blast)**
+
+```bash
+#!/bin/bash
+# Choose ONE:
+pacstrap -K /mnt intel-ucode  # For Intel CPUs
+# pacstrap -K /mnt amd-ucode  # For AMD CPUs
+```
+
+If you will be using GRUB on UEFI, also install:
+
+PS: **you can skip this step if you'll be using [BLAST](https://github.com/gabrielgnsilva/blast)**
+
+```bash
+#!/bin/bash
+pacstrap -K /mnt grub efibootmgr
 ```
 
 ### Generate fstab
@@ -232,7 +252,7 @@ arch-chroot /mnt
 
 ### Configuring mkinitcpio
 
-Make sure the `lvm2` package is installed and add the `keyboard`, `encrypt` and `lvm2` hooks to `mkinitcpio.conf`.
+Make sure the `cryptsetup` and `lvm2` packages are installed and add the `keyboard`, `encrypt` and `lvm2` hooks to `mkinitcpio.conf`.
 
 ```bash
 #!/bin/bash
@@ -241,7 +261,7 @@ EDITOR /etc/mkinitcpio.conf
 ```
 
 ```markdown
-HOOKS=(base `udev` autodetect modconf kms `keyboard` `keymap` `consolefont` block `encrypt` `lvm2` filesystems fsck)
+HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)
 ```
 
 Regenerate `initramfs` after saving the changes.
@@ -249,7 +269,7 @@ Regenerate `initramfs` after saving the changes.
 ```bash
 #!/bin/bash
 
-mkinitcpio -p linux  # Or linux-lts
+mkinitcpio -P
 ```
 
 ### Configuring the bootloader
@@ -260,18 +280,34 @@ PS: If you'll be using [BLAST](https://github.com/gabrielgnsilva/blast), skip to
 
 #### GRUB
 
+Ensure that the `grub` and `efibootmgr` packages are installed:
+
 ```bash
 #!/bin/bash
-$ blkid | grep "sda2"
-/dev/sda2: LABEL="ROOT" UUID="e8bdb9ea-134f-47aa-9c4f-459a4a60acaa"...
+pacman -S --needed grub efibootmgr
+```
 
-# GRUB
+Obtain the UUID of the encrypted partition:
+
+```bash
+#!/bin/bash
+blkid -s UUID -o value /dev/sda2
+```
+
+Configure the kernel parameter in `/etc/default/grub`:
+
+```bash
 $ cat /etc/default/grub
-[...]
-GRUB_CMDLINE_LINUX="cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=LABEL=ROOT"
-[...]
+# ...
+GRUB_CMDLINE_LINUX="cryptdevice=UUID=PUT-YOUR-SDA2-UUID-HERE:lvm root=LABEL=ROOT"
+```
 
-$ grub-mkconfig -o /boot/grub/grub.cfg
+Finally, install GRUB and generate the configuration file:
+
+```bash
+#!/bin/bash
+grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck
+grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
 #### Systemd-boot
@@ -280,8 +316,15 @@ Install it:
 
 ```bash
 bootctl install
-mkinitcpio -p linux
+mkinitcpio -P
 systemctl enable systemd-boot-update.service
+```
+
+Obtain the UUID of the encrypted partition:
+
+```bash
+#!/bin/bash
+blkid -s UUID -o value /dev/sda2
 ```
 
 ```bash
@@ -290,17 +333,21 @@ $ cat /boot/loader/entries/arch.conf
 
 title   Arch Linux
 linux   /vmlinuz-linux
-initrd  /intel-ucode.img
+# Use the line that matches your CPU:
+initrd  /intel-ucode.img  # For Intel CPUs
+# initrd  /amd-ucode.img  # For AMD CPUs
 initrd  /initramfs-linux.img
-options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=LABEL=ROOT rw
+options cryptdevice=UUID=PUT-YOUR-SDA2-UUID-HERE:lvm root=LABEL=ROOT rw
 
 $ cat /boot/loader/entries/arch-fallback.conf
 
 title   Arch Linux (fallback initramfs)
 linux   /vmlinuz-linux
-initrd  /intel-ucode.img
+# Use the line that matches your CPU:
+initrd  /intel-ucode.img  # For Intel CPUs
+# initrd  /amd-ucode.img  # For AMD CPUs
 initrd  /initramfs-linux-fallback.img
-options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=LABEL=ROOT rw
+options cryptdevice=UUID=PUT-YOUR-SDA2-UUID-HERE:lvm root=LABEL=ROOT rw
 ```
 
 ## Post-Installation
