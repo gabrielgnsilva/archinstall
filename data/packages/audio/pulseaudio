@@ -1,6 +1,0 @@
-pulseaudio
-pulseaudio-alsa
-pulseaudio-jack
-lib32-libpulse
-lib32-alsa-plugins
-pulsemixer
