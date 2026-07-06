@@ -21,7 +21,6 @@ The content of this document is a personal guide developed for installing Arch L
     - [Chroot](#chroot)
     - [Configuring mkinitcpio](#configuring-mkinitcpio)
     - [Configuring the bootloader](#configuring-the-bootloader)
-      - [GRUB](#grub)
       - [Systemd-boot](#systemd-boot)
   - [Post-Installation](#post-installation)
 
@@ -86,7 +85,7 @@ cryptsetup close to_be_wiped
 
 #### Preparing the disk
 
-Use `fdisk` to modify the partition table. Create an EFI System Partition (ESP) to be mounted at `/boot` with a size of 512 MiB or more, and another partition that will contain the LUKS container.
+Use `fdisk` or to modify partition tables. Create a partition to be mounted at `/boot` with a size of 1 GiB and another partition (Linux LVM) which will later contain the encrypted container.
 
 ```bash
 #!/bin/bash
@@ -134,13 +133,25 @@ Create all your logical volumes on the volume group:
 #!/bin/bash
 
 lvcreate -L 8G vg0 -n swap
-lvcreate -L 32G vg0 -n root
+lvcreate -L 160G vg0 -n root
 lvcreate -l 100%FREE vg0 -n home
 
-# leave at least 256 MiB free space in the volume group to allow using e2scrub
+# leave at least 1 GiB free space in the volume group to allow using e2scrub,
+# snapshots, or other metadata operations
 
-lvreduce -L -256M vg0/home
+lvreduce -L -1G vg0/home
 ```
+
+When using [BLAST](#post-installation), the 8 GiB swap logical volume acts as fallback swap. BLAST configures zram as the primary compressed swap device with `zram-generator`:
+
+```ini
+[zram0]
+zram-size = min(ram / 2, 16384)
+compression-algorithm = zstd
+swap-priority = 100
+```
+
+On a system with 32 GiB of RAM, this creates a 16 GiB zram swap device with higher priority than the disk swap.
 
 Format your file systems on each logical volume:
 
@@ -188,7 +199,7 @@ To set up a network connection in the live environment, go through the following
 
 #### Ethernet
 
-- Plug in the cable... Duh..
+- Plug in the cable.
 
 ### Select The Mirrors
 
@@ -197,38 +208,20 @@ Use `reflector` to automatically update `/etc/pacman.d/mirrorlist`:
 ```bash
 #!/bin/bash
 
-reflector --country "Brazil" --protocol https --sort rate --save /etc/pacman.d/mirrorlist
+reflector --country COUNTRY,
 ```
 
 ### Install Essential Packages
 
-Use pacstrap to install the base package, Linux kernel, firmware for common hardware and other packages. If you encrypted your device or partition, make sure to also install `cryptsetup` and `lvm2`
+Use pacstrap to install the base package, Linux kernel, firmware for common hardware and other packages. If you encrypted your device or partition, make sure to also install `lvm2`. Install the CPU microcode package that matches your processor: `intel-ucode` for Intel or `amd-ucode` for AMD.
 
 ```bash
 #!/bin/bash
 
-pacstrap -K /mnt base base-devel linux linux-firmware linux-firmware-qlogic linux-firmware-marvell sof-firmware vim git dhcpcd openssh cryptsetup lvm2
+pacstrap -K /mnt base base-devel linux linux-firmware linux-firmware-qlogic linux-firmware-marvell sof-firmware vim git openssh lvm2 intel-ucode
 ```
 
-Install the CPU microcode package that matches your processor:
-
-PS: **you can skip this step if you'll be using [BLAST](https://github.com/gabrielgnsilva/blast)**
-
-```bash
-#!/bin/bash
-# Choose ONE:
-pacstrap -K /mnt intel-ucode  # For Intel CPUs
-# pacstrap -K /mnt amd-ucode  # For AMD CPUs
-```
-
-If you will be using GRUB on UEFI, also install:
-
-PS: **you can skip this step if you'll be using [BLAST](https://github.com/gabrielgnsilva/blast)**
-
-```bash
-#!/bin/bash
-pacstrap -K /mnt grub efibootmgr
-```
+Replace `intel-ucode` with `amd-ucode` on AMD systems.
 
 ### Generate fstab
 
@@ -252,7 +245,7 @@ arch-chroot /mnt
 
 ### Configuring mkinitcpio
 
-Make sure the `cryptsetup` and `lvm2` packages are installed and add the `keyboard`, `encrypt` and `lvm2` hooks to `mkinitcpio.conf`.
+Make sure the `lvm2` package is installed and add the `keyboard`, `encrypt` and `lvm2` hooks to `mkinitcpio.conf`.
 
 ```bash
 #!/bin/bash
@@ -261,7 +254,7 @@ EDITOR /etc/mkinitcpio.conf
 ```
 
 ```markdown
-HOOKS=(base udev autodetect modconf kms keyboard keymap consolefont block encrypt lvm2 filesystems fsck)
+HOOKS=(base `udev` autodetect modconf kms `keyboard` `keymap` `consolefont` block `encrypt` `lvm2` filesystems fsck)
 ```
 
 Regenerate `initramfs` after saving the changes.
@@ -269,46 +262,14 @@ Regenerate `initramfs` after saving the changes.
 ```bash
 #!/bin/bash
 
-mkinitcpio -P
+mkinitcpio -p linux  # Or linux-lts
 ```
 
 ### Configuring the bootloader
 
 In order to unlock the encrypted root partition at boot, the following kernel parameter needs to be set on the bootloader `cryptdevice=UUID=DEVICE_UUID:lvm`:
 
-PS: If you'll be using [BLAST](https://github.com/gabrielgnsilva/blast), skip to [Post-Installation](#post-installation) setup.
-
-#### GRUB
-
-Ensure that the `grub` and `efibootmgr` packages are installed:
-
-```bash
-#!/bin/bash
-pacman -S --needed grub efibootmgr
-```
-
-Obtain the UUID of the encrypted partition:
-
-```bash
-#!/bin/bash
-blkid -s UUID -o value /dev/sda2
-```
-
-Configure the kernel parameter in `/etc/default/grub`:
-
-```bash
-$ cat /etc/default/grub
-# ...
-GRUB_CMDLINE_LINUX="cryptdevice=UUID=PUT-YOUR-SDA2-UUID-HERE:lvm root=LABEL=ROOT"
-```
-
-Finally, install GRUB and generate the configuration file:
-
-```bash
-#!/bin/bash
-grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB --recheck
-grub-mkconfig -o /boot/grub/grub.cfg
-```
+PS: If you'll be using [BLAST](#post-installation), skip to [Post-Installation](#post-installation) setup.
 
 #### Systemd-boot
 
@@ -316,16 +277,23 @@ Install it:
 
 ```bash
 bootctl install
-mkinitcpio -P
+mkinitcpio -p linux
 systemctl enable systemd-boot-update.service
 ```
 
-Obtain the UUID of the encrypted partition:
+Create the loader configuration:
 
 ```bash
 #!/bin/bash
-blkid -s UUID -o value /dev/sda2
+$ cat /boot/loader/loader.conf
+
+default      arch.conf
+timeout      1
+console-mode max
+editor       no
 ```
+
+Use `/intel-ucode.img` on Intel systems or `/amd-ucode.img` on AMD systems.
 
 ```bash
 #!/bin/bash
@@ -333,23 +301,19 @@ $ cat /boot/loader/entries/arch.conf
 
 title   Arch Linux
 linux   /vmlinuz-linux
-# Use the line that matches your CPU:
-initrd  /intel-ucode.img  # For Intel CPUs
-# initrd  /amd-ucode.img  # For AMD CPUs
+initrd  /intel-ucode.img
 initrd  /initramfs-linux.img
-options cryptdevice=UUID=PUT-YOUR-SDA2-UUID-HERE:lvm root=LABEL=ROOT rw
+options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=UUID=c12ea209-1f90-4d69-946f-766deef7bfe1 rw zswap.enabled=0
 
 $ cat /boot/loader/entries/arch-fallback.conf
 
 title   Arch Linux (fallback initramfs)
 linux   /vmlinuz-linux
-# Use the line that matches your CPU:
-initrd  /intel-ucode.img  # For Intel CPUs
-# initrd  /amd-ucode.img  # For AMD CPUs
+initrd  /intel-ucode.img
 initrd  /initramfs-linux-fallback.img
-options cryptdevice=UUID=PUT-YOUR-SDA2-UUID-HERE:lvm root=LABEL=ROOT rw
+options cryptdevice=UUID=e8bdb9ea-134f-47aa-9c4f-459a4a60acaa:lvm root=UUID=c12ea209-1f90-4d69-946f-766deef7bfe1 rw zswap.enabled=0
 ```
 
 ## Post-Installation
 
-Use [BLAST](https://github.com/gabrielgnsilva/blast) to automatically configure Arch with my [dotfiles](https://github.com/gabrielgnsilva/dotfiles), [Niri](https://niri-wm.github.io/niri/), packages, and system settings. Or follow the [Official Installation Guide#Configure the system](https://wiki.archlinux.org/title/Installation_guide#Configure_the_system).
+Use [BLAST](https://github.com/gabrielgnsilva/blast) to automatically configure Arch with my [dotfiles](https://github.com/gabrielgnsilva/dotfiles), [Niri](https://github.com/niri-wm/niri), packages, and system settings. Or follow the [Official Installation Guide#Configure the system](https://wiki.archlinux.org/title/Installation_guide#Configure_the_system).
